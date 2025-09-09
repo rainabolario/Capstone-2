@@ -111,6 +111,7 @@ const LoginPage: React.FC = () => {
                 fontSize: "1rem",
                 boxSizing: "border-box",
                 backgroundColor: "white",
+                color: "#000000",
               }}
               required
             />
@@ -142,6 +143,7 @@ const LoginPage: React.FC = () => {
                 transition: "all 0.2s",
                 boxSizing: "border-box",
                 backgroundColor: "white",
+                color: "#000000",
               }}
               required
             />
