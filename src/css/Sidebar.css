@@ -1,0 +1,57 @@
+.sidebar {
+  width: 240px;
+  background-color: white;
+  border-right: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-logo-img {
+  width: 170px;          /* ✅ You can adjust this */
+  height: auto;          /* ✅ Keeps correct aspect ratio */
+  border-radius: 8px;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto;
+}
+
+.sidebar-content {
+  padding: 16px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.sidebar-section {
+  margin-bottom: 16px;
+}
+
+.sidebar-title {
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #6b7280;
+  margin-bottom: 8px;
+}
+
+.sidebar-button {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 14px;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-radius: 6px;
+  color: #374151;
+  transition: background-color 0.2s;
+}
+
+.sidebar-button:hover {
+  background-color: #f3f4f6;
+}
+
+.sidebar-button.active {
+  background-color: #f97316;
+  color: white;
+  font-weight: 500;
+}

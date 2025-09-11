@@ -1,14 +1,21 @@
 import type React from "react"
 import { useState } from "react"
 
-const LoginPage: React.FC = () => {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
+interface LoginProps {
+  onLogin: (email: string) => void;
+}
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    console.log("Login attempt:", { email, password })
-  }
+const LoginPage: React.FC<LoginProps> = ({ onLogin }) => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (email && password) {
+      console.log("Login attempt:", { email, password });
+      onLogin(email);
+    }
+  };
 
   return (
     <div
@@ -49,8 +56,8 @@ const LoginPage: React.FC = () => {
         style={{
           position: "relative",
           zIndex: 2,
-          width: "700px",
-          height: "400px",
+          width: "550px",
+          height: "300px",
           backgroundImage: 'url("/Kc\'s logo.png")',
           backgroundSize: "contain",
           backgroundRepeat: "no-repeat",
@@ -63,14 +70,14 @@ const LoginPage: React.FC = () => {
       {/* Right Side - Login Form */}
       <div
         style={{
-          maxWidth: "400px",
+          maxWidth: "330px", 
           width: "100%",
           zIndex: 2,
           position: "relative",
-          padding: "2rem", 
-          flexShrink: 0, 
+          padding: "1.5rem",    
+          flexShrink: 0,
           backgroundColor: "white",
-          borderRadius: "24px",
+          borderRadius: "20px", 
         }}
       >
         <h2
