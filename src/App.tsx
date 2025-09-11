@@ -2,20 +2,30 @@ import { useState } from "react"
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom"
 import Login from "./pages/login"
 import MarketBasket from "./pages/MarketBasket"
-// import WhatIfAnalysis from "./pages/WhatIfAnalysis"
+import WhatIfAnalysis from "./pages/WhatIfAnalysis"
+import SalesData from "./pages/SalesData"
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [currentUser, setCurrentUser] = useState("")
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return localStorage.getItem("auth") === "true"
+  })
+
+  const [currentUser, setCurrentUser] = useState(() => {
+    return localStorage.getItem("user") || ""
+  })
 
   const handleLogin = (email: string) => {
     setIsAuthenticated(true)
     setCurrentUser(email)
+    localStorage.setItem("auth", "true")
+    localStorage.setItem("user", email)
   }
 
   const handleLogout = () => {
     setIsAuthenticated(false)
     setCurrentUser("")
+    localStorage.removeItem("auth")
+    localStorage.removeItem("user")
   }
 
   return (
@@ -30,6 +40,26 @@ function App() {
           element={
             isAuthenticated ? (
               <MarketBasket currentUser={currentUser} onLogout={handleLogout} />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
+          path="/whatifanalysis"
+          element={
+            isAuthenticated ? (
+              <WhatIfAnalysis currentUser={currentUser} onLogout={handleLogout} />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
+          path="/salesdata"
+          element={
+            isAuthenticated ? (
+              <SalesData /> // ✅ No props passed
             ) : (
               <Navigate to="/login" replace />
             )

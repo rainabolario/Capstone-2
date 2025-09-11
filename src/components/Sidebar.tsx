@@ -1,45 +1,40 @@
-import type React from "react"
+import React from "react"
+import { Link, useLocation } from "react-router-dom"
 import "../css/Sidebar.css"
 
-interface SidebarProps {
-  activeItem?: string
-  onItemClick?: (item: string) => void
-}
+const menuItems = [
+  { id: "dashboard", label: "Dashboard", path: "/dashboard", section: "main" },
+  { id: "sales-overview", label: "Sales Overview", path: "/sales-overview", section: "main" },
+  { id: "sales-forecast", label: "Sales Forecast", path: "/sales-forecast", section: "main" },
+  { id: "performance-market-basket", label: "Performance & Market Basket", path: "/marketbasket", section: "main" },
+  { id: "customer-behavior", label: "Customer Behavior & Trends", path: "/customer-behavior", section: "main" },
+  { id: "what-if-analysis", label: "What-if Analysis", path: "/whatifanalysis", section: "main" },
+  { id: "sales-data", label: "Sales Data", path: "/salesdata", section: "orders" },
+  { id: "account", label: "Account", path: "/account", section: "other" },
+  { id: "help", label: "Help", path: "/help", section: "other" },
+  { id: "logout", label: "Logout", path: "/login", section: "other" }, // Redirect logout to login
+]
 
-const Sidebar: React.FC<SidebarProps> = ({ activeItem = "Performance & Market Basket", onItemClick }) => {
-  const menuItems = [
-    { id: "dashboard", label: "Dashboard", section: "main" },
-    { id: "sales-overview", label: "Sales Overview", section: "main" },
-    { id: "sales-forecast", label: "Sales Forecast", section: "main" },
-    { id: "performance-market-basket", label: "Performance & Market Basket", section: "main" },
-    { id: "customer-behavior", label: "Customer Behavior & Trends", section: "main" },
-    { id: "what-if-analysis", label: "What-if Analysis", section: "main" },
-    { id: "sales-data", label: "Sales Data", section: "orders" },
-    { id: "account", label: "Account", section: "other" },
-    { id: "help", label: "Help", section: "other" },
-    { id: "logout", label: "Logout", section: "other" },
-  ]
-
-  const handleItemClick = (itemId: string) => {
-    if (onItemClick) {
-      onItemClick(itemId)
-    }
-  }
+const Sidebar: React.FC = () => {
+  const location = useLocation()
 
   const renderSection = (sectionName: string, title?: string) => (
-    <div className="sidebar-section">
+    <div className="sidebar-section" key={sectionName}>
       {title && <h3 className="sidebar-title">{title}</h3>}
       {menuItems
         .filter((item) => item.section === sectionName)
-        .map((item) => (
-          <button
-            key={item.id}
-            onClick={() => handleItemClick(item.label)}
-            className={`sidebar-button ${activeItem === item.label ? "active" : ""}`}
-          >
-            {item.label}
-          </button>
-        ))}
+        .map((item) => {
+          const isActive = location.pathname === item.path
+          return (
+            <Link
+              key={item.id}
+              to={item.path}
+              className={`sidebar-button ${isActive ? "active" : ""}`}
+            >
+              {item.label}
+            </Link>
+          )
+        })}
     </div>
   )
 
