@@ -1,0 +1,106 @@
+/* Created new what-if CSS to match market basket layout structure */
+.whatif-dashboard {
+  display: flex;
+  height: 100vh;
+  background-color: rgb(242, 242, 235);
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+.whatif-dashboard-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.whatif-dashboard-header {
+  background-color: rgb(242, 242, 235);
+  padding: 16px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 25px;
+}
+
+.whatif-dashboard-header h1 {
+  font-size: 22px;
+  font-weight: 600;
+  color: #000000;
+  margin: 0;
+}
+
+.whatif-dashboard-main {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Grid for row 1 (4 columns) */
+.whatif-grid.whatif-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  height: 400px;
+}
+
+/* Grid for row 2 (1 full-width card) */
+.whatif-grid.whatif-grid-1 {
+  display: grid;
+  grid-template-columns: 1fr;
+  height: 300px;
+}
+
+/* Cards */
+.whatif-card {
+  background-color: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.whatif-card-header {
+  padding: 16px;
+  border-bottom: 1px solid #e5e7eb;
+  background-color: #f9fafb;
+}
+
+.whatif-card-header h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.whatif-card-body {
+  flex: 1;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+/* Large placeholder for chart */
+.whatif-large-placeholder {
+  height: 100%;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  .whatif-grid-4 {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+  .whatif-grid-1 {
+    height: auto;
+  }
+}

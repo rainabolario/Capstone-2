@@ -1,26 +1,16 @@
-import React, { useState } from "react";
+import React from "react";
 import Sidebar from "../components/Sidebar";
 import "../css/MarketBasket.css";
 
 interface MarketBasketProps {
-  currentUser?: string;
-  onLogout: () => void;
+  currentUser?: string
+  onLogout: () => void
 }
 
-const MarketBasket: React.FC<MarketBasketProps> = ({ onLogout }) => {
-  const [activeItem, setActiveItem] = useState("Performance & Market Basket")
-
-  const handleSidebarClick = (item: string) => {
-    if (item === "Logout") {
-      onLogout()
-    } else {
-      setActiveItem(item)
-    }
-  }
-
+const MarketBasket: React.FC<MarketBasketProps> = ({ }) => {
   return (
     <div className="market-basket-dashboard">
-      <Sidebar activeItem={activeItem} onItemClick={handleSidebarClick} />
+      <Sidebar />
 
       <div className="market-basket-dashboard-content">
         <div className="market-basket-dashboard-header">

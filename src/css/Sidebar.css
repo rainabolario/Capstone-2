@@ -7,8 +7,8 @@
 }
 
 .sidebar-logo-img {
-  width: 170px;          /* ✅ You can adjust this */
-  height: auto;          /* ✅ Keeps correct aspect ratio */
+  width: 170px;          
+  height: auto;        
   border-radius: 8px;
   object-fit: contain;
   display: block;
@@ -18,7 +18,7 @@
 .sidebar-content {
   padding: 16px;
   flex: 1;
-  overflow-y: auto;
+  /*overflow-y: auto;*/
 }
 
 .sidebar-section {
@@ -34,7 +34,8 @@
 
 .sidebar-button {
   display: block;
-  width: 100%;
+  max-width: auto;
+  /*width: 100% ;*/
   padding: 8px 12px;
   font-size: 14px;
   text-align: left;
@@ -47,7 +48,7 @@
 }
 
 .sidebar-button:hover {
-  background-color: #f3f4f6;
+  background-color: none;
 }
 
 .sidebar-button.active {
