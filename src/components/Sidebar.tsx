@@ -1,18 +1,30 @@
 import React from "react"
 import { Link, useLocation } from "react-router-dom"
+import {
+    PanelsTopLeft as OverviewIcon,
+    ChartSpline as ForecastIcon,
+    ChartNoAxesCombined as PerformanceIcon,
+    ChartColumnStacked as BehaviorTrendsIcon,
+    ChartNetwork as WhatIfIcon,
+    Sheet as SalesDataIcon,
+    Archive as ArchiveIcon,
+    User as AccountIcon,
+    BadgeInfo as HelpIcon,
+    LogOut as LogoutIcon
+} from "lucide-react"
 import "../css/Sidebar.css"
 
 const menuItems = [
-  { id: "dashboard", label: "Dashboard", path: "/dashboard", section: "main" },
-  { id: "sales-overview", label: "Sales Overview", path: "/sales-overview", section: "main" },
-  { id: "sales-forecast", label: "Sales Forecast", path: "/sales-forecast", section: "main" },
-  { id: "performance-market-basket", label: "Performance & Market Basket", path: "/marketbasket", section: "main" },
-  { id: "customer-behavior", label: "Customer Behavior & Trends", path: "/customer-behavior", section: "main" },
-  { id: "what-if-analysis", label: "What-if Analysis", path: "/whatifanalysis", section: "main" },
-  { id: "sales-data", label: "Sales Data", path: "/salesdata", section: "orders" },
-  { id: "account", label: "Account", path: "/account", section: "other" },
-  { id: "help", label: "Help", path: "/help", section: "other" },
-  { id: "logout", label: "Logout", path: "/login", section: "other" }, // Redirect logout to login
+  { id: "sales-overview", icon: <OverviewIcon /> , label: "Sales Overview", path: "/salesoverview", section: "main" },
+  { id: "sales-forecast", icon: <ForecastIcon /> , label: "Sales Forecast", path: "/salesforecast", section: "main" },
+  { id: "performance-market-basket", icon: <PerformanceIcon /> , label: "Performance & Market Basket", path: "/marketbasket", section: "main" },
+  { id: "customer-behavior", icon: <BehaviorTrendsIcon /> , label: "Customer Behavior & Trends", path: "/customerbehavior", section: "main" },
+  { id: "what-if-analysis", icon: <WhatIfIcon /> , label: "What-if Analysis", path: "/whatifanalysis", section: "main" },
+  { id: "sales-data", icon: <SalesDataIcon /> , label: "Sales Data", path: "/salesdata", section: "orders" },
+  { id: "archive-data", icon: <ArchiveIcon /> , label: "Archive Data", path: "/archive-data", section: "orders" },
+  { id: "account", icon: <AccountIcon /> , label: "Account", path: "/account", section: "other" },
+  { id: "help", icon: <HelpIcon /> , label: "Help", path: "/help", section: "other" },
+  { id: "logout", icon: <LogoutIcon /> , label: "Logout", path: "/login", section: "other" }, // Redirect logout to login
 ]
 
 const Sidebar: React.FC = () => {
@@ -31,6 +43,7 @@ const Sidebar: React.FC = () => {
               to={item.path}
               className={`sidebar-button ${isActive ? "active" : ""}`}
             >
+              {item.icon}
               {item.label}
             </Link>
           )
@@ -45,7 +58,7 @@ const Sidebar: React.FC = () => {
       </div>
 
       <div className="sidebar-content">
-        {renderSection("main")}
+        {renderSection("main", "Dashboard")}
         {renderSection("orders", "Orders")}
         {renderSection("other", "Other")}
       </div>

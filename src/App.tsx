@@ -1,9 +1,15 @@
 import { useState } from "react"
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom"
 import Login from "./pages/login"
+import SalesOverview from "./pages/SalesOverview"
+import SalesForecast from "./pages/SalesForecast"
+import CustomerBehavior from "./pages/CustomerBehavior"
 import MarketBasket from "./pages/MarketBasket"
 import WhatIfAnalysis from "./pages/WhatIfAnalysis"
 import SalesData from "./pages/SalesData"
+/*import ArchiveData from "./pages/ArchiveData"*/
+import Account from "./pages/Account"
+import Help from "./pages/Help"
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
@@ -36,10 +42,40 @@ function App() {
           element={isAuthenticated ? <Navigate to="/marketbasket" replace /> : <Login onLogin={handleLogin} />}
         />
         <Route
+          path="/salesoverview"
+          element={
+            isAuthenticated ? (
+              <SalesOverview currentUser={currentUser} onLogout={handleLogout} />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
+          path="/salesforecast"
+          element={
+            isAuthenticated ? (
+              <SalesForecast currentUser={currentUser} onLogout={handleLogout} />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
           path="/marketbasket"
           element={
             isAuthenticated ? (
               <MarketBasket currentUser={currentUser} onLogout={handleLogout} />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
+          path="/customerbehavior"
+          element={
+            isAuthenticated ? (
+              <CustomerBehavior currentUser={currentUser} onLogout={handleLogout} />
             ) : (
               <Navigate to="/login" replace />
             )
@@ -66,6 +102,27 @@ function App() {
           }
         />
         <Route path="/" element={<Navigate to={isAuthenticated ? "/marketbasket" : "/login"} replace />} />
+
+        <Route
+          path="/account"
+          element={
+            isAuthenticated ? (
+              <Account />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
+          path="/help"
+          element={
+            isAuthenticated ? (
+              <Help />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
       </Routes>
     </Router>
   )
