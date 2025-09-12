@@ -6,6 +6,8 @@
     --light-orange: #F1C2A7;
     --bg: #F1EEE9;
     --white: #F9F9FA;
+    --dark-gray: #6b7280;
+    --red: #E33E3E;
 
     /* Font */
     --general-font: "Inter", sans-serif;
@@ -15,4 +17,141 @@
     display: flex;
     flex-direction: row;
     background-color: var(--bg);
+}
+
+.account-content{
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.account-content h1{
+    font-family: var(--general-font);
+    color: black;
+    font-size: 24px;
+    margin: 30px 0px 0px 20px;
+}
+
+.profile-container,
+.password-container,
+.delete-container{
+    display: flex;
+    flex-direction: column;
+    padding: 25px;
+    margin: 20px;
+    border-radius: 10px;
+    background-color: var(--white);
+    box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.25);
+}
+
+.profile-container h2,
+.password-container h2,
+.delete-container h2{
+    font-family: var(--general-font);
+    color: black;
+    font-size: 16px;
+    margin: 0px 0px 10px 0px;
+    font-weight: normal;
+}
+
+.profile-content{
+    display: flex;
+    flex-direction: row;
+    color: black;
+    gap: 10px;
+}
+
+.password-content,
+.delete-content{
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.profile-content input,
+.password-content input,
+.delete-content input{
+    width: -webkit-fill-available;
+    border-radius: 10px;
+    background-color: transparent;
+    border: 1px solid #ccc;
+    padding: 10px 15px;
+    margin-bottom: 10px;
+    color: black;
+}
+
+.role-container select{
+    width: -webkit-fill-available;
+    border-radius: 10px;
+    background-color: transparent;
+    border: 1px solid #ccc;
+    padding: 10px 15px;
+    margin-bottom: 10px;
+    color: black;
+}
+
+.first-name-container,
+.last-name-container,
+.email-container,
+.role-container{
+    width: 100%;
+}
+
+.first-name-container p,
+.last-name-container p,
+.email-container p,
+.role-container p,
+.current-password-container p,
+.new-password-container p,
+.reenter-password-container p,
+.type-email-container p,
+.type-delete-container p{
+    font-family: var(--general-font);
+    font-size: 12px;
+    margin: 0px;
+    color: var(--dark-gray);
+}
+
+
+.delete-instructions{
+    font-family: var(--general-font);
+    font-size: 12px;
+    margin: 0px 0px 10px 10px;
+    background-color: var(--red);
+    border-radius: 10px;
+    padding: 10px 15px;
+}
+
+.delete-instructions p{
+    color: var(--white);
+    margin-left: 20px;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    font-size: 14px;
+}
+
+.delete-instructions svg{
+    vertical-align: text-top;
+    color: var(--white);
+    height: 18px;
+}
+
+.button-content{
+    display: flex;
+    flex-direction: row-reverse;
+    gap: 10px;
+}
+
+.button-content button{
+    background-color: transparent;
+    border: 1px solid var(--orange);
+    color: var(--orange);
+    margin: 10px;
+    padding: 8px 25px;
+}
+
+.button-content button:hover{
+    background-color: var(--orange);
+    color: white;
+    cursor: pointer;
 }
