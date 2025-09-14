@@ -1,3 +1,14 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap");
+
+:root {
+  --orange: #ec7a1c;
+  --light-orange: #f1c2a7;
+  --bg: #f1eee9;
+  --white: #f9f9fa;
+  --dark-gray: #6b7280;
+  --general-font: "Inter", sans-serif;
+}
+
 .sales-data-dashboard {
   display: flex;
   height: 100vh;
@@ -29,11 +40,9 @@
 }
 
 .page-title {
-  font-size: 22px;
-  font-weight: 600;
-  color: #000000;
-  margin: 0;
-  letter-spacing: 1px;
+  font-family: var(--general-font);
+  color: black;
+  font-size: 24px;
 }
 
 /* Action Bar */
