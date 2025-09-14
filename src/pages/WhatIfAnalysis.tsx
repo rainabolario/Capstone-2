@@ -1,69 +1,60 @@
-import React from "react"
-import Sidebar from "../components/Sidebar"
-import "../css/WhatIfAnalysis.css"
+import React from "react";
+import Sidebar from "../components/Sidebar";
+import "../css/WhatIfAnalysis.css";
 
 interface WhatIfAnalysisProps {
-  currentUser?: string
-  onLogout: () => void
+  currentUser?: string;
+  onLogout: () => void;
 }
 
-const WhatIfAnalysis: React.FC<WhatIfAnalysisProps> = ({ }) => {
+const WhatIfAnalysis: React.FC<WhatIfAnalysisProps> = ({}) => {
   return (
-    <div className="whatif-dashboard">
+    <div className="whatif-container">
       <Sidebar />
-
-      <div className="whatif-dashboard-content">
-        <div className="whatif-dashboard-header">
+      <div className="whatif-content">
+        <div className="whatif-header">
           <h1>WHAT-IF ANALYSIS</h1>
         </div>
 
-        <div className="whatif-dashboard-main">
-          {/* Row 1 */}
-          <div className="whatif-grid whatif-grid-4">
-            <div className="whatif-card">
-              <div className="whatif-card-header">
-                <h3>Price Increase</h3>
-              </div>
-              <div className="whatif-card-body">Placeholder</div>
-            </div>
+        <div className="whatif-sales-header">
+          <h2>Sales Projections</h2>
+        </div>
 
-            <div className="whatif-card">
-              <div className="whatif-card-header">
-                <h3>Product Demand</h3>
-              </div>
-              <div className="whatif-card-body">Placeholder</div>
-            </div>
 
-            <div className="whatif-card">
-              <div className="whatif-card-header">
-                <h3>What If Parameter</h3>
-              </div>
-              <div className="whatif-card-body">Placeholder (Sliders)</div>
-            </div>
-
-            <div className="whatif-card">
-              <div className="whatif-card-header">
-                <h3>Recommendation</h3>
-              </div>
-              <div className="whatif-card-body">Placeholder</div>
-            </div>
+        <div className="whatif-grid">
+          {/* Price Increase */}
+          <div className="whatif-div1">
+            <div className="whatif-content1">Price Increase</div>
+            <div className="placeholder">Placeholder (Sales Projection)</div>
           </div>
 
-          {/* Row 2 */}
-          <div className="whatif-grid whatif-grid-1">
-            <div className="whatif-card">
-              <div className="whatif-card-header">
-                <h3>Sales Impact of Parameter Change</h3>
-              </div>
-              <div className="whatif-card-body whatif-large-placeholder">
-                Placeholder (Chart)
-              </div>
-            </div>
+          {/* Product Demand */}
+          <div className="whatif-div2">
+            <div className="whatif-content2">Product Demand</div>
+            <div className="placeholder">Placeholder (Sales Projection)</div>
+          </div>
+
+          {/* What-If Parameter */}
+          <div className="whatif-div3">
+            <div className="whatif-content3">What-If Parameter</div>
+            <div className="placeholder">Placeholder (Sliders)</div>
+          </div>
+
+          {/* Recommendation */}
+          <div className="whatif-div4">
+            <div className="whatif-content4">Recommendation</div>
+            <div className="placeholder">Placeholder (Text)</div>
+          </div>
+
+          {/* Sales Impact Chart */}
+          <div className="whatif-div5">
+            <div className="whatif-content5">Sales Impact of Parameter Change</div>
+            <div className="placeholder">Chart Placeholder</div>
           </div>
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default WhatIfAnalysis
+export default WhatIfAnalysis;
