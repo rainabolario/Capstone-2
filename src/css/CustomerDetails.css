@@ -1,0 +1,35 @@
+.customer-details-container{
+    margin: 20px;
+    padding: 30px 30px 50px 30px;
+    border-radius: 10px;
+    background-color: #f9f9f9;
+    display: flex;
+    flex-direction: column;
+}
+
+.customer-details-container h3{
+    color: black;
+    font-size: 16px;
+    margin: 0px 0px 20px 0px;
+}
+
+.customer-details-field{
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-top: 30px;
+}
+
+.customer-address-field{
+    display: flex;
+    flex-direction: row;
+    gap: 15px;
+    justify-content: space-between;
+}
+
+.datetime-container{
+    display: flex;
+    flex-direction: row;
+    gap: 15px;
+    justify-content: space-between;
+}

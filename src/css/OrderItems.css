@@ -1,0 +1,73 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+
+:root{
+    /* Colors */
+    --orange : #EC7A1C;
+    --light-orange: #F1C2A7;
+    --bg: #F1EEE9;
+    --white: #F9F9FA;
+    --dark-gray: #6b7280;
+    --red: #E33E3E;
+
+    /* Font */
+    --general-font: "Inter", sans-serif;
+}
+
+.order-items-container {
+    display: flex;
+    background-color: var(--white);
+    border-radius: 10px;
+    margin: 20px;
+    padding: 30px 30px 50px 30px;
+    flex-direction: column;
+}
+
+.order-items-container h3 {
+    color: black;
+    margin: 0px 0px 20px 0px;
+}
+
+.order-items-content{
+    flex: 1;
+}
+
+.order-items-list{
+    width: 30%;
+}
+
+.size-group p{
+    color: black;
+    margin: 0px;
+    font-size: 14px;
+}
+
+.size-quantity-container{
+    display: flex;
+    gap: 10px;
+    justify-content: space-between;
+}
+
+.order-items-list h4{
+    color: black;
+    margin: 0px 0px 10px 0px;
+}
+
+.order-items-list p{
+    color: black;
+    margin: 0px;
+    font-size: 12px;
+    color: var(--dark-gray);
+}
+
+.order-items-list h5{
+    color: black;
+    margin: 0px;
+    font-weight: normal;
+}
+
+.order-item-fields{
+    display: flex;
+    flex-direction: row;
+    gap: 15px;
+    margin-bottom: 20px;
+}

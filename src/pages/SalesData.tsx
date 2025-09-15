@@ -1,6 +1,12 @@
-import React, { useState } from "react"
+import React, { use, useState } from "react"
 import Sidebar from "../components/Sidebar"
+import { useNavigate } from "react-router-dom"
 import "../css/SalesData.css"
+import { 
+  AddOutlined,
+  Inventory2Outlined,
+  EditOutlined
+} from "@mui/icons-material"
 
 interface SalesRecord {
   id: string
@@ -19,6 +25,7 @@ interface SalesRecord {
 }
 
 const SalesData: React.FC = () => {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("")
   const [salesData] = useState<SalesRecord[]>([
     {
@@ -43,6 +50,7 @@ const SalesData: React.FC = () => {
   }
 
   const handleAddRecord = () => {
+    navigate("/addrecord"); 
     console.log("Add Record clicked")
   }
 
@@ -86,13 +94,13 @@ const SalesData: React.FC = () => {
 
           <div className="action-buttons">
             <button className="btn btn-primary" onClick={handleAddRecord}>
-              + Add Record
+              <AddOutlined style={{ fontSize: 20 }} />Add Record
             </button>
             <button className="btn btn-secondary" onClick={handleArchiveRecord}>
-              📁 Archive Record
+              <Inventory2Outlined style={{ fontSize: 20 }} />Archive Record
             </button>
             <button className="btn btn-secondary" onClick={handleEditRecord}>
-              ✏️ Edit Record
+              <EditOutlined style={{ fontSize: 20 }} />Edit Record
             </button>
           </div>
         </div>

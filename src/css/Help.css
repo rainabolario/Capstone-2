@@ -19,6 +19,7 @@
 
 .help-container{
     display: flex;
+    height: 100vh;
     flex-direction: row;
     background-color: var(--bg);
 }
@@ -125,6 +126,7 @@
     transition: color 0.3s;
     border-radius: 15px;
     min-height: auto;
+    color: var(--white);
 }
 
 .category-tabs .MuiTab-root.Mui-selected {

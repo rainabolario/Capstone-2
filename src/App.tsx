@@ -7,6 +7,7 @@ import CustomerBehavior from "./pages/CustomerBehavior"
 import MarketBasket from "./pages/MarketBasket"
 import WhatIfAnalysis from "./pages/WhatIfAnalysis"
 import SalesData from "./pages/SalesData"
+import AddRecord from "./pages/AddRecord"
 /*import ArchiveData from "./pages/ArchiveData"*/
 import Account from "./pages/Account"
 import Help from "./pages/Help"
@@ -96,6 +97,16 @@ function App() {
           element={
             isAuthenticated ? (
               <SalesData /> // ✅ No props passed
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
+          path="/addrecord"
+          element={
+            isAuthenticated ? (
+              <AddRecord /> 
             ) : (
               <Navigate to="/login" replace />
             )

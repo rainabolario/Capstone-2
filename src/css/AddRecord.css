@@ -1,0 +1,60 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+
+:root{
+    /* Colors */
+    --orange : #EC7A1C;
+    --light-orange: #F1C2A7;
+    --bg: #F1EEE9;
+    --white: #F9F9FA;
+    --dark-gray: #6b7280;
+    --red: #E33E3E;
+
+    /* Font */
+    --general-font: "Inter", sans-serif;
+}
+
+.add-record-container {
+    display: flex;
+    flex-direction: row;
+    background-color: var(--bg);
+}
+
+.add-form-container {
+    flex: 1;
+}
+
+.add-form-container h2 {
+    font-family: var(--general-font);
+    color: black;
+    font-size: 24px;
+    margin: 20px 0px 0px 20px;
+}
+
+.add-form-content{
+    padding: 40px 90px 0px 90px;
+}
+
+.button-form-container{
+    display: flex;
+    justify-content: flex-end;
+    padding: 20px 110px 30px 20px;
+    gap: 10px;
+}
+
+.step-container{
+    padding: 0px 90px;
+    margin-top: 20px;
+}
+
+.next-button, .submit-button{
+    background-color: var(--orange) !important;
+    border-radius: 10px !important;
+    padding: 5px 50px !important;
+}
+
+.back-button{
+    border: 1px solid var(--dark-gray) !important;
+    border-radius: 10px !important;
+    padding: 5px 50px !important;
+    color: var(--dark-gray) !important;
+}
