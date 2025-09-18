@@ -1,12 +1,8 @@
 import React, { useState } from "react"
 import Sidebar from "../components/Sidebar"
-import { useNavigate } from "react-router-dom"
-import "../css/SalesData.css"
-import { 
-  AddOutlined,
-  Inventory2Outlined,
-  EditOutlined
-} from "@mui/icons-material"
+//import { useNavigate } from "react-router-dom"
+import "../css/ArchivedData.css"
+//import { Inventory2Outlined } from "@mui/icons-material"
 
 interface SalesRecord {
   id: string
@@ -24,13 +20,13 @@ interface SalesRecord {
   total: number
 }
 
-const SalesData: React.FC = () => {
-  const navigate = useNavigate();
+const ArchivedData: React.FC = () => {
+  //const navigate = useNavigate()
   const [searchTerm, setSearchTerm] = useState("")
   const [salesData] = useState<SalesRecord[]>([
     {
       id: "1",
-      name: "Example",
+      name: "Archived Example",
       time: "",
       date: "",
       day: "",
@@ -49,65 +45,39 @@ const SalesData: React.FC = () => {
     setSearchTerm(e.target.value)
   }
 
-  const handleAddRecord = () => {
-    navigate("/addrecord"); 
-    console.log("Add Record clicked")
-  }
-
-  const handleArchiveRecord = () => {
-    console.log("Archive Record clicked")
-  }
-
-  const handleEditRecord = () => {
-    console.log("Edit Record clicked")
-  }
-
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
-      <Sidebar /> {/* ✅ NO PROPS NEEDED HERE */}<div className="sales-data-container">
-       
-        
+      <Sidebar />
+      <div className="archived-data-container">
         {/* Header Section */}
-        <div className="header-section">
+        <div className="archived-header-section">
           <div className="header-left">
-            <h1 className="page-title">SALES DATA</h1>
+            <h1 className="archived-page-title">ARCHIVED DATA</h1>
           </div>
         </div>
 
         {/* Action Bar */}
-        <div className="action-bar">
-          <div className="search-container">
+        <div className="archived-action-bar">
+          <div className="archived-search-container">
             <input
               type="text"
               placeholder="Search"
               value={searchTerm}
               onChange={handleSearch}
-              className="search-input"
+              className="archived-search-input"
             />
-            <button className="search-button">
+            <button className="archived-search-button">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <circle cx="11" cy="11" r="8"></circle>
                 <path d="m21 21-4.35-4.35"></path>
               </svg>
             </button>
           </div>
-
-          <div className="action-buttons">
-            <button className="btn btn-primary" onClick={handleAddRecord}>
-              <AddOutlined style={{ fontSize: 20 }} />Add Record
-            </button>
-            <button className="btn btn-secondary" onClick={handleArchiveRecord}>
-              <Inventory2Outlined style={{ fontSize: 20 }} />Archive Record
-            </button>
-            <button className="btn btn-secondary" onClick={handleEditRecord}>
-              <EditOutlined style={{ fontSize: 20 }} />Edit Record
-            </button>
-          </div>
         </div>
 
         {/* Data Table */}
-        <div className="table-container">
-          <table className="sales-table">
+        <div className="archived-table-container">
+          <table className="archived-table">
             <thead>
               <tr>
                 <th>Name</th>
@@ -156,4 +126,4 @@ const SalesData: React.FC = () => {
   )
 }
 
-export default SalesData
+export default ArchivedData

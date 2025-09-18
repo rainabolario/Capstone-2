@@ -8,7 +8,7 @@ import MarketBasket from "./pages/MarketBasket"
 import WhatIfAnalysis from "./pages/WhatIfAnalysis"
 import SalesData from "./pages/SalesData"
 import AddRecord from "./pages/AddRecord"
-/*import ArchiveData from "./pages/ArchiveData"*/
+import ArchiveData from "./pages/ArchiveData"
 import Account from "./pages/Account"
 import Help from "./pages/Help"
 
@@ -96,12 +96,22 @@ function App() {
           path="/salesdata"
           element={
             isAuthenticated ? (
-              <SalesData /> // ✅ No props passed
+              <SalesData /> 
             ) : (
               <Navigate to="/login" replace />
             )
           }
         />
+        <Route
+            path="/archive-data"
+            element={
+              isAuthenticated ? (
+                <ArchiveData/>
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
         <Route
           path="/addrecord"
           element={
