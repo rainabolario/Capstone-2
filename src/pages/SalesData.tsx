@@ -24,7 +24,11 @@ interface SalesRecord {
   total: number
 }
 
-const SalesData: React.FC = () => {
+interface SalesDataProps {
+  onLogout?: () => void;
+}
+
+const SalesData: React.FC<SalesDataProps> = ({ onLogout }) => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("")
   const [salesData] = useState<SalesRecord[]>([
@@ -64,7 +68,7 @@ const SalesData: React.FC = () => {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
-      <Sidebar /> {/* ✅ NO PROPS NEEDED HERE */}<div className="sales-data-container">
+      <Sidebar onLogout={onLogout} /><div className="sales-data-container">
        
         
         {/* Header Section */}

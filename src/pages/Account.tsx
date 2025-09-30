@@ -2,10 +2,14 @@ import "../css/Account.css";
 import Sidebar from "../components/Sidebar";
 import { OctagonAlert } from "lucide-react";
 
-const Account: React.FC = () => {
+interface AccountProps {
+  onLogout?: () => void;
+}
+
+const Account: React.FC<AccountProps> = ({ onLogout }) => {
     return (
         <div className="account-container">
-        <Sidebar />
+        <Sidebar onLogout={onLogout} />
         <div className="account-content">
             <h1>ACCOUNT SETTINGS</h1>
             <div className="account-settings-content">

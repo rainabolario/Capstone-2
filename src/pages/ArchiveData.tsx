@@ -20,7 +20,11 @@ interface SalesRecord {
   total: number
 }
 
-const ArchivedData: React.FC = () => {
+interface ArchiveDataProps {
+  onLogout?: () => void;
+}
+
+const ArchivedData: React.FC<ArchiveDataProps> = ({ onLogout }) => {
   //const navigate = useNavigate()
   const [searchTerm, setSearchTerm] = useState("")
   const [salesData] = useState<SalesRecord[]>([
@@ -47,7 +51,7 @@ const ArchivedData: React.FC = () => {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
-      <Sidebar />
+      <Sidebar onLogout={onLogout} />
       <div className="archived-data-container">
         {/* Header Section */}
         <div className="archived-header-section">

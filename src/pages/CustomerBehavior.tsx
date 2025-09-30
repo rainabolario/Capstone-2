@@ -6,10 +6,10 @@ interface CustomerBehaviorProps {
   onLogout: () => void
 }
 
-const CustomerBehavior: React.FC<CustomerBehaviorProps> = ({}) => {
+const CustomerBehavior: React.FC<CustomerBehaviorProps> = ({ currentUser, onLogout }) => {
     return (
         <div className='forecast-container'>
-            <Sidebar />
+            <Sidebar onLogout={onLogout} />
                 <div className="behavior-content">
                     <div className="behavior-header">
                         <h1>CUSTOMER BEHAVIOR AND TRENDS</h1>

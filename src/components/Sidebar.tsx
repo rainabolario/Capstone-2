@@ -1,5 +1,5 @@
 import React from "react"
-import { Link, useLocation } from "react-router-dom"
+import { Link, useLocation, useNavigate } from "react-router-dom"
 import {
     PanelsTopLeft as OverviewIcon,
     ChartSpline as ForecastIcon,
@@ -14,21 +14,33 @@ import {
 } from "lucide-react"
 import "../css/Sidebar.css"
 
-const menuItems = [
-  { id: "sales-overview", icon: <OverviewIcon /> , label: "Sales Overview", path: "/salesoverview", section: "main" },
-  { id: "sales-forecast", icon: <ForecastIcon /> , label: "Sales Forecast", path: "/salesforecast", section: "main" },
-  { id: "performance-market-basket", icon: <PerformanceIcon /> , label: "Performance & Market Basket", path: "/marketbasket", section: "main" },
-  { id: "customer-behavior", icon: <BehaviorTrendsIcon /> , label: "Customer Behavior & Trends", path: "/customerbehavior", section: "main" },
-  { id: "what-if-analysis", icon: <WhatIfIcon /> , label: "What-if Analysis", path: "/whatifanalysis", section: "main" },
-  { id: "sales-data", icon: <SalesDataIcon /> , label: "Sales Data", path: "/salesdata", section: "orders" },
-  { id: "archive-data", icon: <ArchiveIcon /> , label: "Archive Data", path: "/archive-data", section: "orders" },
-  { id: "account", icon: <AccountIcon /> , label: "Account", path: "/account", section: "other" },
-  { id: "help", icon: <HelpIcon /> , label: "Help", path: "/help", section: "other" },
-  { id: "logout", icon: <LogoutIcon /> , label: "Logout", path: "/login", section: "other" }, // Redirect logout to login
-]
+interface SidebarProps {
+  onLogout?: () => void
+}
 
-const Sidebar: React.FC = () => {
+const Sidebar: React.FC<SidebarProps> = ({ onLogout }) => {
   const location = useLocation()
+  const navigate = useNavigate()
+
+  const handleLogout = () => {
+    if (onLogout) {
+      onLogout()
+    }
+    navigate("/login")
+  }
+
+  const menuItems = [
+    { id: "sales-overview", icon: <OverviewIcon /> , label: "Sales Overview", path: "/salesoverview", section: "main" },
+    { id: "sales-forecast", icon: <ForecastIcon /> , label: "Sales Forecast", path: "/salesforecast", section: "main" },
+    { id: "performance-market-basket", icon: <PerformanceIcon /> , label: "Performance & Market Basket", path: "/marketbasket", section: "main" },
+    { id: "customer-behavior", icon: <BehaviorTrendsIcon /> , label: "Customer Behavior & Trends", path: "/customerbehavior", section: "main" },
+    { id: "what-if-analysis", icon: <WhatIfIcon /> , label: "What-if Analysis", path: "/whatifanalysis", section: "main" },
+    { id: "sales-data", icon: <SalesDataIcon /> , label: "Sales Data", path: "/salesdata", section: "orders" },
+    { id: "archive-data", icon: <ArchiveIcon /> , label: "Archive Data", path: "/archive-data", section: "orders" },
+    { id: "account", icon: <AccountIcon /> , label: "Account", path: "/account", section: "other" },
+    { id: "help", icon: <HelpIcon /> , label: "Help", path: "/help", section: "other" },
+    { id: "logout", icon: <LogoutIcon /> , label: "Logout", path: "/login", section: "other", isLogout: true },
+  ]
 
   const renderSection = (sectionName: string, title?: string) => (
     <div className="sidebar-section" key={sectionName}>
@@ -37,6 +49,22 @@ const Sidebar: React.FC = () => {
         .filter((item) => item.section === sectionName)
         .map((item) => {
           const isActive = location.pathname === item.path
+          
+          // Handle logout specially
+          if (item.isLogout) {
+            return (
+              <div
+                key={item.id}
+                onClick={handleLogout}
+                className="sidebar-button"
+                style={{ cursor: 'pointer' }}
+              >
+                {item.icon}
+                {item.label}
+              </div>
+            )
+          }
+          
           return (
             <Link
               key={item.id}

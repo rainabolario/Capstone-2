@@ -38,7 +38,11 @@ interface FormData {
 
 const steps = ['Customer Order Details', 'Order Items', 'Review & Submit'];
 
-export default function AddRecord() {
+interface AddRecordProps {
+  onLogout?: () => void;
+}
+
+export default function AddRecord({ onLogout }: AddRecordProps) {
   const [activeStep, setActiveStep] = useState(0);
 
   const [formData, setFormData] = useState<FormData>({
@@ -64,7 +68,7 @@ export default function AddRecord() {
 
   return (
     <div className='add-record-container'>
-      <Sidebar />
+      <Sidebar onLogout={onLogout} />
       <div className='add-form-container'>
         <h2>ORDER RECORD</h2>
         <div className="step-container">

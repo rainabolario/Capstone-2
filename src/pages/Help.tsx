@@ -15,7 +15,11 @@ import {
 } from "@mui/material";
 import ExpandMore from "@mui/icons-material/ExpandMore";
 
-const Help: React.FC = () => {
+interface HelpProps {
+  onLogout?: () => void;
+}
+
+const Help: React.FC<HelpProps> = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState(0);
   const [expandedQuestion, setExpandedQuestion] = useState<string | false>(false);
 
@@ -28,7 +32,7 @@ const Help: React.FC = () => {
 
   return (
     <div className="help-container">
-      <Sidebar />
+      <Sidebar onLogout={onLogout} />
       <div className="help-content">
         <div className="top-content">
           <h1>HELP CENTER</h1>

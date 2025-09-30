@@ -40,7 +40,7 @@ function App() {
       <Routes>
         <Route
           path="/login"
-          element={isAuthenticated ? <Navigate to="/marketbasket" replace /> : <Login onLogin={handleLogin} />}
+          element={isAuthenticated ? <Navigate to="/salesoverview" replace /> : <Login onLogin={handleLogin} />}
         />
         <Route
           path="/salesoverview"
@@ -96,7 +96,7 @@ function App() {
           path="/salesdata"
           element={
             isAuthenticated ? (
-              <SalesData /> 
+              <SalesData onLogout={handleLogout} /> 
             ) : (
               <Navigate to="/login" replace />
             )
@@ -106,7 +106,7 @@ function App() {
             path="/archive-data"
             element={
               isAuthenticated ? (
-                <ArchiveData/>
+                <ArchiveData onLogout={handleLogout}/>
               ) : (
                 <Navigate to="/login" replace />
               )
@@ -116,7 +116,7 @@ function App() {
           path="/addrecord"
           element={
             isAuthenticated ? (
-              <AddRecord /> 
+              <AddRecord onLogout={handleLogout} /> 
             ) : (
               <Navigate to="/login" replace />
             )
@@ -128,7 +128,7 @@ function App() {
           path="/account"
           element={
             isAuthenticated ? (
-              <Account />
+              <Account onLogout={handleLogout} />
             ) : (
               <Navigate to="/login" replace />
             )
@@ -138,12 +138,12 @@ function App() {
           path="/help"
           element={
             isAuthenticated ? (
-              <Help />
+              <Help onLogout={handleLogout} />
             ) : (
               <Navigate to="/login" replace />
             )
           }
-        />
+        />        
       </Routes>
     </Router>
   )

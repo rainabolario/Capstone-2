@@ -7,10 +7,10 @@ interface SalesOverviewProps {
     onLogout: () => void
 }
 
-const SalesOverview: React.FC<SalesOverviewProps> = ({ }) => {
+const SalesOverview: React.FC<SalesOverviewProps> = ({ currentUser, onLogout }) => {
     return (
         <div className='overview-container'>
-            <Sidebar />
+            <Sidebar onLogout={onLogout} />
                 <div className="overview-content">
                     <div className="overview-header">
                         <h1>SALES OVERVIEW AND HISTORICAL DATA</h1>

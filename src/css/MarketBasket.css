@@ -14,6 +14,7 @@
   flex-direction: row;
   background-color: var(--bg);
   font-family: var(--general-font);
+  height: 100vh;
 }
 
 .market-basket-content {
