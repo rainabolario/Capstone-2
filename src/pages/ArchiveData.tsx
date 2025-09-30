@@ -2,6 +2,9 @@ import React, { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import "../css/ArchivedData.css";
 import { supabase } from "../supabaseClient";
+import { Checkbox } from "@mui/material";
+import Button from "@mui/material/Button";
+import RestoreIcon from '@mui/icons-material/Restore';
 
 interface SalesRecord {
   id: string;
@@ -144,13 +147,26 @@ const ArchivedData: React.FC = () => {
             </button>
           </div>
 
-          <button
+          <Button
+            variant="outlined"
             onClick={handleRestore}
+            startIcon={<RestoreIcon />}
+            sx={{ 
+              color: 'black',
+              border: 'none',
+              padding: '8px 25px',
+                '&:hover': { 
+                  backgroundColor: '#ff8c42', 
+                  color: 'white',
+                },
+                '&.Mui-disabled': {
+                  border: 'none', 
+                }
+              }} 
             disabled={selectedIds.length === 0}
-            className="restore-button"
           >
             Restore Selected
-          </button>
+          </Button>
         </div>
 
         {/* Data Table */}
@@ -162,8 +178,9 @@ const ArchivedData: React.FC = () => {
               <thead>
                 <tr>
                   <th>
-                    <input
-                      type="checkbox"
+                    <Checkbox
+                      color="primary"
+                      indeterminate={selectedIds.length > 0 && selectedIds.length < filteredData.length}
                       checked={selectedIds.length === filteredData.length && filteredData.length > 0}
                       onChange={(e) =>
                         e.target.checked
@@ -191,8 +208,13 @@ const ArchivedData: React.FC = () => {
                   filteredData.map((record) => (
                     <tr key={record.id}>
                       <td>
-                        <input
-                          type="checkbox"
+                        <Checkbox
+                          sx={{ 
+                            color: 'gray', 
+                            '&.Mui-checked': { 
+                              color: '#ff8c42' 
+                            } 
+                            }}
                           checked={selectedIds.includes(record.id)}
                           onChange={() => toggleSelect(record.id)}
                         />

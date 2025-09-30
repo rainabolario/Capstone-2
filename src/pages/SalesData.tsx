@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 import "../css/SalesData.css";
 import { AddOutlined, Inventory2Outlined, EditOutlined } from "@mui/icons-material";
 import { supabase } from "../supabaseClient";
+import { Checkbox } from "@mui/material";
+import Button from "@mui/material/Button";
 
 interface SalesRecord {
   id: string;
@@ -26,7 +28,7 @@ interface SalesDataProps {
   onLogout?: () => void;
 }
 
-const SalesData: React.FC<SalesDataProps> = ({ onLogout }) => {
+const SalesData: React.FC<SalesDataProps> = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [salesData, setSalesData] = useState<SalesRecord[]>([]);
@@ -125,7 +127,17 @@ const SalesData: React.FC<SalesDataProps> = ({ onLogout }) => {
   };
 
   const handleEditRecord = () => {
-    console.log("Edit Record clicked");
+    if(selectedRecords.size === 1) {
+      const editId = selectedRecords.values().next().value;
+      const recordToEdit = salesData.find(record => record.id === editId);
+      navigate(`/editrecord/${editId}`);
+
+      if(recordToEdit){
+        navigate(`/editrecord/${editId}`, { state: { record: recordToEdit } });
+      }
+    } else {
+      alert("Please select exactly one record to edit.");
+    }
   };
 
   // 🔹 Toggle selection by UUID only
@@ -149,6 +161,18 @@ const SalesData: React.FC<SalesDataProps> = ({ onLogout }) => {
         String(val).toLowerCase().includes(searchTerm.toLowerCase())
       )
     );
+  
+  const numSelected = selectedRecords.size;
+  const rowCount = filteredData.length;
+  
+  const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.checked) {
+      const newSelected = new Set(filteredData.map(r => r.id));
+      setSelectedRecords(newSelected);
+      return;
+    }
+    setSelectedRecords(new Set());
+  }
 
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
@@ -172,15 +196,62 @@ const SalesData: React.FC<SalesDataProps> = ({ onLogout }) => {
           </div>
 
           <div className="action-buttons">
-            <button className="btn btn-primary" onClick={handleAddRecord}>
-              <AddOutlined style={{ fontSize: 20 }} /> Add Record
-            </button>
-            <button className="btn btn-secondary" onClick={handleArchiveRecord}>
-              <Inventory2Outlined style={{ fontSize: 20 }} /> Archive Record
-            </button>
-            <button className="btn btn-secondary" onClick={handleEditRecord}>
-              <EditOutlined style={{ fontSize: 20 }} /> Edit Record
-            </button>
+            <Button
+              variant="outlined"
+              sx={{ 
+                  color: 'black',
+                  border: 'none',
+                  '&:hover': {
+                      backgroundColor: '#EC7A1C',
+                      color: 'white',
+                  },
+                  padding: '8px 25px',
+              }}
+              onClick={handleAddRecord}
+              startIcon={<AddOutlined style={{ fontSize: 20 }} />}
+            >
+              Add Record
+            </Button>
+            <Button
+              variant="outlined"
+              sx={{ 
+                  color: 'black',
+                  border: 'none',
+                  '&:hover': {
+                      backgroundColor: '#EC7A1C',
+                      color: 'white',
+                  },
+                  '&.Mui-disabled': {
+                      border: 'none', 
+                  },
+                  padding: '8px 25px',
+              }}
+              onClick={handleArchiveRecord}
+              startIcon={<Inventory2Outlined style={{ fontSize: 20 }} />}
+              disabled={selectedRecords.size === 0}
+            >
+              Archive Record
+            </Button>
+            <Button
+              variant="outlined"
+              sx={{ 
+                  color: 'black',
+                  border: 'none',
+                  '&:hover': {
+                      backgroundColor: '#EC7A1C',
+                      color: 'white',
+                  },
+                  '&.Mui-disabled': {
+                      border: 'none', 
+                  },
+                  padding: '8px 25px',
+              }}
+              onClick={handleEditRecord}
+              startIcon={<EditOutlined style={{ fontSize: 20 }} />}
+              disabled={selectedRecords.size !== 1}
+            >
+              Edit Record
+            </Button>
           </div>
         </div>
 
@@ -189,17 +260,11 @@ const SalesData: React.FC<SalesDataProps> = ({ onLogout }) => {
             <thead>
               <tr>
                 <th>
-                  <input
-                    type="checkbox"
-                    checked={
-                      filteredData.length > 0 &&
-                      filteredData.every(r => selectedRecords.has(r.id))
-                    }
-                    onChange={(e) =>
-                      e.target.checked
-                        ? setSelectedRecords(new Set(filteredData.map(r => r.id)))
-                        : setSelectedRecords(new Set())
-                    }
+                  <Checkbox
+                    color="primary"
+                    indeterminate={numSelected > 0 && numSelected < rowCount}
+                    checked={rowCount > 0 && numSelected === rowCount}
+                    onChange={handleSelectAll}
                   />
                 </th>
                 <th>Name</th>
@@ -221,8 +286,13 @@ const SalesData: React.FC<SalesDataProps> = ({ onLogout }) => {
                 filteredData.map((record) => (
                   <tr key={record.id}>
                     <td>
-                      <input
-                        type="checkbox"
+                      <Checkbox
+                        sx={{ 
+                          color: "#9ca3af",
+                          '&.Mui-checked': { 
+                            color: "#EC7A1C" 
+                          }
+                        }}
                         checked={selectedRecords.has(record.id)}
                         onChange={() => toggleRecordSelection(record.id)}
                       />

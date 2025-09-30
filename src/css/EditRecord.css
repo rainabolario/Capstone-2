@@ -1,0 +1,74 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+
+:root{
+    /* Colors */
+    --orange : #EC7A1C;
+    --light-orange: #F1C2A7;
+    --bg: #F1EEE9;
+    --white: #F9F9FA;
+    --dark-gray: #6b7280;
+    --red: #E33E3E;
+
+    /* Font */
+    --general-font: "Inter", sans-serif;
+}
+
+.edit-record-container {
+    display: flex;
+    flex-direction: row;
+    background-color: var(--bg);
+    height: 100vh;
+}
+
+.edit-form-container {
+    flex: 1;
+}
+
+.edit-form-container h2 {
+    font-family: var(--general-font);
+    color: black;
+    font-size: 24px;
+    margin: 20px 0px 0px 20px;
+}
+
+.edit-form-content{
+    padding: 40px 90px 0px 90px;
+}
+
+.button-form-container{
+    display: flex;
+    justify-content: flex-end;
+    padding: 20px 110px 30px 20px;
+    gap: 10px;
+}
+
+.edit-form{
+    margin: 40px 90px 0px 90px;
+    padding: 30px 30px 50px 30px;
+    border-radius: 10px;
+    background-color: #f9f9f9;
+    display: flex;
+    flex-direction: column;
+}
+
+.edit-form h3{
+    color: black;
+    font-size: 16px;
+    margin: 0px 0px 20px 0px;
+}
+
+.edit-form-wrapper{
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+    margin-top: 30px;
+}
+
+.form-row{
+    display: flex;
+    gap: 15px;
+}
+
+.form-field{
+    flex-grow: 1;
+}

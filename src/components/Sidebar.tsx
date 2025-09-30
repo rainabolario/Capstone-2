@@ -37,6 +37,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onLogout }) => {
     { id: "what-if-analysis", icon: <WhatIfIcon /> , label: "What-if Analysis", path: "/whatifanalysis", section: "main" },
     { id: "sales-data", icon: <SalesDataIcon /> , label: "Sales Data", path: "/salesdata", section: "orders" },
     { id: "archive-data", icon: <ArchiveIcon /> , label: "Archive Data", path: "/archive-data", section: "orders" },
+    { id: "user-management", icon: <AccountIcon /> , label: "User Management", path: "/user-management", section: "other" },
     { id: "account", icon: <AccountIcon /> , label: "Account", path: "/account", section: "other" },
     { id: "help", icon: <HelpIcon /> , label: "Help", path: "/help", section: "other" },
     { id: "logout", icon: <LogoutIcon /> , label: "Logout", path: "/login", section: "other", isLogout: true },

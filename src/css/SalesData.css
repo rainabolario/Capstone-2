@@ -137,13 +137,14 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 14px;
+  text-align: center;
 }
 
 .sales-table th {
   background-color: #ffb894;
   color: #333;
   padding: 12px 8px;
-  text-align: left;
+  text-align: center;
   font-weight: 600;
   border-right: 1px solid #ff8c42;
   white-space: nowrap;

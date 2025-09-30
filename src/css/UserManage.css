@@ -1,0 +1,96 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+
+:root{
+    /* Colors */
+    --orange : #EC7A1C;
+    --light-orange: #F1C2A7;
+    --bg: #F1EEE9;
+    --white: #F9F9FA;
+    --dark-gray: #6b7280;
+    --red: #E33E3E;
+
+    /* Font */
+    --general-font: "Inter", sans-serif;
+}
+
+.user-management-container{
+    display: flex;
+    flex-direction: row;
+    background-color: var(--bg);
+    height: 100vh;
+}
+
+.user-management-content{
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+}
+
+.user-management-content h2{
+    font-family: var(--general-font);
+    color: black;
+    font-size: 24px;
+    margin: 30px 0px 0px 0px;
+}
+
+.users-table-container{
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-radius: 8px;
+    margin-top: 16px;
+}
+
+.users-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.users-table th {
+    background-color: #ffb894;
+    color: #333;
+    padding: 12px 8px;
+    text-align: left;
+    font-weight: 600;
+    border-right: 1px solid #ff8c42;
+    white-space: nowrap;
+    min-width: 80px;
+    text-align: center;
+}
+
+.users-table td {
+    padding: 12px 8px;
+    border-right: 1px solid #e0e0e0;
+    border-bottom: 1px solid #e0e0e0;
+    color: #333;
+    text-align: center;
+    background-color: white;
+}
+
+.search-input{
+    color: black;
+    position: relative;
+}
+
+.search-container svg{
+    position: absolute;
+    color: gray;
+    top: 20%;
+    right: 20%;
+}
+
+.action-container{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 16px;
+    gap: 20px;
+}
+
+.buttons-container{
+    display: flex;
+    gap: 10px;
+}

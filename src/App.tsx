@@ -8,7 +8,9 @@ import MarketBasket from "./pages/MarketBasket"
 import WhatIfAnalysis from "./pages/WhatIfAnalysis"
 import SalesData from "./pages/SalesData"
 import AddRecord from "./pages/AddRecord"
+import EditRecord from "./pages/EditRecord"
 import ArchiveData from "./pages/ArchiveData"
+import UserManagement from "./pages/UserManage"
 import Account from "./pages/Account"
 import Help from "./pages/Help"
 
@@ -122,8 +124,28 @@ function App() {
             )
           }
         />
+        <Route
+          path="/editrecord/:id"
+          element={
+            isAuthenticated ? (
+              <EditRecord onLogout={handleLogout} />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
         <Route path="/" element={<Navigate to={isAuthenticated ? "/marketbasket" : "/login"} replace />} />
 
+        <Route
+          path="/user-management"
+          element={
+            isAuthenticated ? (
+              <UserManagement onLogout={handleLogout} />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
         <Route
           path="/account"
           element={
