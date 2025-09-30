@@ -1,9 +1,9 @@
 import Sidebar from '../components/Sidebar';
 import {
-    Stepper, 
-    Step, 
-    StepLabel, 
-    Button
+  Stepper,
+  Step,
+  StepLabel,
+  Button
 } from '@mui/material';
 import "../css/AddRecord.css";
 import CustomerDetails from '../components/forms/CustomerDetails';
@@ -11,6 +11,7 @@ import OrderItems from '../components/forms/OrderItems';
 import ReviewSubmit from '../components/forms/ReviewSubmit';
 import { useState } from 'react';
 import { Dayjs } from 'dayjs';
+import { supabase } from "../supabaseClient";
 
 interface Customer {
   name: string;
@@ -21,6 +22,7 @@ interface Customer {
   date: Dayjs | null;
   time: Dayjs | null;
   paymentMode: string;
+  orderMode: string;
 }
 
 interface OrderItem {
@@ -28,13 +30,13 @@ interface OrderItem {
   name: string;
   size: string;
   qty: number;
+  price: number;
 }
 
 interface FormData {
   customer: Customer;
   items: OrderItem[];
 }
-
 
 const steps = ['Customer Order Details', 'Order Items', 'Review & Submit'];
 
@@ -46,24 +48,117 @@ export default function AddRecord({ onLogout }: AddRecordProps) {
   const [activeStep, setActiveStep] = useState(0);
 
   const [formData, setFormData] = useState<FormData>({
-  customer: {
-    name: "",
-    unit: "",
-    street: "",
-    barangay: "",
-    city: "",
-    date: null,
-    time: null,
-    paymentMode: "",
-  },
-  items: [],
+    customer: {
+      name: "",
+      unit: "",
+      street: "",
+      barangay: "",
+      city: "",
+      date: null,
+      time: null,
+      paymentMode: "",
+      orderMode: "",
+    },
+    items: [],
   });
 
   const handleNext = () => setActiveStep((prev) => prev + 1);
   const handleBack = () => setActiveStep((prev) => prev - 1);
 
-  const handleSubmit = () => {
-    console.log('Submitting', formData);
+  const handleSubmit = async () => {
+    try {
+      console.log("Submitting", formData);
+
+      // 1. Insert customer
+      const { data: customer, error: customerError } = await supabase
+        .from("customers")
+        .insert([
+          {
+            name: formData.customer.name,
+            unit: formData.customer.unit,
+            street: formData.customer.street,
+            barangay: formData.customer.barangay,
+            city: formData.customer.city,
+            delivery_date: formData.customer.date?.toISOString().split("T")[0],
+            delivery_time: formData.customer.time
+              ? formData.customer.time.format("HH:mm:ss")
+              : null,
+            order_mode: formData.customer.orderMode,
+            payment_mode: formData.customer.paymentMode,
+          },
+        ])
+        .select()
+        .single();
+
+      if (customerError) throw customerError;
+
+      // 2. Insert order (total_amount starts as 0)
+      const { data: order, error: orderError } = await supabase
+        .from("orders")
+        .insert([
+          {
+            customer_id: customer.id,
+            total_amount: 0, // safe, schema has numeric
+          },
+        ])
+        .select()
+        .single();
+
+      if (orderError) throw orderError;
+
+      // 3. Prepare order items with subtotals
+      const itemsPayload = formData.items.map((item) => ({
+        order_id: order.id,
+        category: item.category,
+        name: item.name,
+        size: item.size,
+        qty: item.qty,
+        price: item.price,
+        total: item.price * item.qty,
+      }));
+
+      const totalAmount = itemsPayload.reduce(
+        (sum, i) => sum + (i.total ?? 0),
+        0
+      );
+
+      // 4. Insert order items
+      const { error: itemsError } = await supabase
+        .from("order_items")
+        .insert(itemsPayload);
+
+      if (itemsError) throw itemsError;
+
+      // 5. Update order with computed total
+      const { error: updateError } = await supabase
+        .from("orders")
+        .update({ total_amount: totalAmount })
+        .eq("id", order.id);
+
+      if (updateError) throw updateError;
+
+      alert("✅ Order successfully saved!");
+
+      // reset form
+      setActiveStep(0);
+      setFormData({
+        customer: {
+          name: "",
+          unit: "",
+          street: "",
+          barangay: "",
+          city: "",
+          date: null,
+          time: null,
+          paymentMode: "",
+          orderMode: "",
+        },
+        items: [],
+      });
+    } catch (err: any) {
+      console.error("Save failed", err);
+      alert("❌ Error saving order. See console.");
+    }
   };
 
   return (
@@ -104,15 +199,27 @@ export default function AddRecord({ onLogout }: AddRecordProps) {
         </div>
 
         <div className='button-form-container'>
-          <Button disabled={activeStep === 0} onClick={handleBack} className='back-button'>
+          <Button
+            disabled={activeStep === 0}
+            onClick={handleBack}
+            className='back-button'
+          >
             Back
           </Button>
           {activeStep === steps.length - 1 ? (
-            <Button variant="contained" onClick={handleSubmit} className='submit-button'>
+            <Button
+              variant="contained"
+              onClick={handleSubmit}
+              className='submit-button'
+            >
               Submit
             </Button>
           ) : (
-            <Button variant="contained" onClick={handleNext} className='next-button'>
+            <Button
+              variant="contained"
+              onClick={handleNext}
+              className='next-button'
+            >
               Next
             </Button>
           )}

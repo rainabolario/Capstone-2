@@ -22,6 +22,7 @@ interface Customer {
   city: string;
   date: Dayjs | null;
   time: Dayjs | null;
+  orderMode: string;
   paymentMode: string;
 }
 
@@ -107,6 +108,29 @@ export default function CustomerDetails({ data, onChange }: Props) {
         </div>
 
         <FormControl fullWidth>
+          <InputLabel id="order-mode-label" shrink>
+            Mode of Order
+          </InputLabel>
+          <Select
+            labelId="order-mode-label"
+            value={data.orderMode}
+            onChange={(e: SelectChangeEvent) =>
+              updateField("orderMode", e.target.value)
+            }
+            displayEmpty
+            renderValue={(selected) =>
+              selected ? selected : <span style={{ color: "#9e9e9e" }}>Select order mode</span>
+            }
+          >
+            <MenuItem value="Instagram">Instagram</MenuItem>
+            <MenuItem value="Facebook">Facebook</MenuItem>
+            <MenuItem value="Viber">Viber</MenuItem>
+            <MenuItem value="Hazel's Phone">Hazel's Phone</MenuItem>
+            <MenuItem value="Enzo's Phone">Enzo's Phone</MenuItem>
+          </Select>
+        </FormControl>
+
+        <FormControl fullWidth>
           <InputLabel id="payment-mode-label" shrink>
             Mode of Payment
           </InputLabel>
@@ -118,7 +142,7 @@ export default function CustomerDetails({ data, onChange }: Props) {
             }
             displayEmpty
             renderValue={(selected) =>
-              selected ? selected : <span style={{ color: "#9e9e9e" }}>Select payment</span>
+              selected ? selected : <span style={{ color: "#9e9e9e" }}>Select payment mode</span>
             }
           >
             <MenuItem value="Cash">Cash</MenuItem>

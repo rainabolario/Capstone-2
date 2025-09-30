@@ -1,52 +1,118 @@
-import React, { useState } from "react"
-import Sidebar from "../components/Sidebar"
-//import { useNavigate } from "react-router-dom"
-import "../css/ArchivedData.css"
-//import { Inventory2Outlined } from "@mui/icons-material"
+import React, { useEffect, useState } from "react";
+import Sidebar from "../components/Sidebar";
+import "../css/ArchivedData.css";
+import { supabase } from "../supabaseClient";
 
 interface SalesRecord {
-  id: string
-  name: string
-  time: string
-  date: string
-  day: string
-  item: string
-  itemSize: string
-  orderType: string
-  quantity: number
-  address: string
-  medium: string
-  mop: string
-  total: number
+  id: string;
+  name: string;
+  time: string;
+  date: string;
+  day: string;
+  item: string;
+  itemSize: string;
+  orderType: string;
+  quantity: number;
+  address: string;
+  medium: string;
+  mop: string;
+  total: number;
 }
 
-interface ArchiveDataProps {
-  onLogout?: () => void;
-}
+const ArchivedData: React.FC = () => {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [salesData, setSalesData] = useState<SalesRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-const ArchivedData: React.FC<ArchiveDataProps> = ({ onLogout }) => {
-  //const navigate = useNavigate()
-  const [searchTerm, setSearchTerm] = useState("")
-  const [salesData] = useState<SalesRecord[]>([
-    {
-      id: "1",
-      name: "Archived Example",
-      time: "",
-      date: "",
-      day: "",
-      item: "",
-      itemSize: "",
-      orderType: "",
-      quantity: 0,
-      address: "",
-      medium: "",
-      mop: "",
-      total: 0,
-    },
-  ])
+  // ✅ Fetch archived records from Supabase
+  useEffect(() => {
+    fetchArchived();
+  }, []);
+
+  const fetchArchived = async () => {
+    setLoading(true);
+
+    const { data, error } = await supabase
+      .from("orders")
+      .select(`
+        id,
+        created_at,
+        total_amount,
+        customers (
+          name, unit, street, barangay, city, payment_mode, order_mode
+        ),
+        order_items (
+          name, size, category, qty, price
+        )
+      `)
+      .eq("archived", true); // ✅ only archived
+
+    if (error) {
+      console.error("Error fetching archived data:", error);
+    } else {
+      const formatted = data.map((order: any) => ({
+        id: order.id,
+        name: order.customers?.name || "",
+        time: new Date(order.created_at).toLocaleTimeString(),
+        date: new Date(order.created_at).toLocaleDateString(),
+        day: new Date(order.created_at).toLocaleDateString("en-US", { weekday: "long" }),
+        item: order.order_items?.map((i: any) => i.name).join(", ") || "",
+        itemSize: order.order_items?.map((i: any) => i.size).join(", ") || "",
+        orderType: order.order_items?.map((i: any) => i.category).join(", ") || "",
+        quantity: order.order_items?.reduce((acc: number, i: any) => acc + (i.qty || 0), 0) || 0,
+        address: `${order.customers?.unit || ""} ${order.customers?.street || ""} ${order.customers?.barangay || ""} ${order.customers?.city || ""}`.trim(),
+        medium: order.customers?.order_mode || "", // ✅ reflect order_mode
+        mop: order.customers?.payment_mode || "",
+        total: order.total_amount || 0,
+      }));
+      setSalesData(formatted);
+    }
+
+    setLoading(false);
+  };
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value)
+    setSearchTerm(e.target.value);
+  };
+
+  // ✅ Toggle checkbox
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  // ✅ Restore selected records
+  const handleRestore = async () => {
+    if (selectedIds.length === 0) {
+      alert("Please select at least one record to restore.");
+      return;
+    }
+
+    const { error } = await supabase
+      .from("orders")
+      .update({ archived: false })
+      .in("id", selectedIds);
+
+    if (error) {
+      console.error("Error restoring records:", error);
+      alert("Failed to restore records.");
+    } else {
+      alert("Records restored successfully.");
+      setSelectedIds([]);
+      fetchArchived();
+    }
+  };
+
+  const filteredData = salesData.filter((record) =>
+    Object.values(record).some((val) =>
+      String(val).toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  );
+
+  function onLogout(): void {
+    throw new Error("Function not implemented.");
   }
 
   return (
@@ -77,57 +143,88 @@ const ArchivedData: React.FC<ArchiveDataProps> = ({ onLogout }) => {
               </svg>
             </button>
           </div>
+
+          <button
+            onClick={handleRestore}
+            disabled={selectedIds.length === 0}
+            className="restore-button"
+          >
+            Restore Selected
+          </button>
         </div>
 
         {/* Data Table */}
         <div className="archived-table-container">
-          <table className="archived-table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Time</th>
-                <th>Date</th>
-                <th>Day</th>
-                <th>Item</th>
-                <th>Item Size</th>
-                <th>Order Type</th>
-                <th>Quantity</th>
-                <th>Address</th>
-                <th>Medium</th>
-                <th>MOP</th>
-                <th>Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {salesData.map((record) => (
-                <tr key={record.id}>
-                  <td>{record.name}</td>
-                  <td>{record.time}</td>
-                  <td>{record.date}</td>
-                  <td>{record.day}</td>
-                  <td>{record.item}</td>
-                  <td>{record.itemSize}</td>
-                  <td>{record.orderType}</td>
-                  <td>{record.quantity || ""}</td>
-                  <td>{record.address}</td>
-                  <td>{record.medium}</td>
-                  <td>{record.mop}</td>
-                  <td>{record.total || ""}</td>
+          {loading ? (
+            <p>Loading archived records...</p>
+          ) : (
+            <table className="archived-table">
+              <thead>
+                <tr>
+                  <th>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.length === filteredData.length && filteredData.length > 0}
+                      onChange={(e) =>
+                        e.target.checked
+                          ? setSelectedIds(filteredData.map((r) => r.id))
+                          : setSelectedIds([])
+                      }
+                    />
+                  </th>
+                  <th>Name</th>
+                  <th>Time</th>
+                  <th>Date</th>
+                  <th>Day</th>
+                  <th>Item</th>
+                  <th>Item Size</th>
+                  <th>Order Type</th>
+                  <th>Quantity</th>
+                  <th>Address</th>
+                  <th>Medium</th>
+                  <th>MOP</th>
+                  <th>Total</th>
                 </tr>
-              ))}
-              {Array.from({ length: 15 }, (_, index) => (
-                <tr key={`empty-${index}`}>
-                  {Array.from({ length: 12 }, (_, i) => (
-                    <td key={i}></td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filteredData.length > 0 ? (
+                  filteredData.map((record) => (
+                    <tr key={record.id}>
+                      <td>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(record.id)}
+                          onChange={() => toggleSelect(record.id)}
+                        />
+                      </td>
+                      <td>{record.name}</td>
+                      <td>{record.time}</td>
+                      <td>{record.date}</td>
+                      <td>{record.day}</td>
+                      <td>{record.item}</td>
+                      <td>{record.itemSize}</td>
+                      <td>{record.orderType}</td>
+                      <td>{record.quantity}</td>
+                      <td>{record.address}</td>
+                      <td>{record.medium}</td>
+                      <td>{record.mop}</td>
+                      <td>{record.total}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={13} style={{ textAlign: "center" }}>
+                      No archived records found.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default ArchivedData
+export default ArchivedData;
