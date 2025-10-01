@@ -1,0 +1,168 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap");
+
+:root {
+  /* Colors */
+  --orange: #ec7a1c;
+  --light-orange: #f1c2a7;
+  --bg: #f1eee9;
+  --white: #f9f9fa;
+  --dark-gray: #6b7280;
+  --red: #e33e3e;
+
+  /* Font */
+  --general-font: "Inter", sans-serif;
+}
+
+* {
+  font-family: var(--general-font);
+}
+
+.help-container {
+  display: flex;
+  height: 100vh;
+  flex-direction: row;
+  background-color: var(--bg);
+}
+
+.help-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.help-content h1 {
+  font-family: var(--general-font);
+  color: black;
+  font-size: 24px;
+  margin: 30px 0px 0px 20px;
+}
+
+.help-content p {
+  font-family: var(--general-font);
+  color: var(--dark-gray);
+  font-size: 14px;
+  margin: 10px 0px 0px 0px;
+}
+
+.search-bar {
+  display: flex;
+  margin: 20px;
+  gap: 10px;
+}
+
+.search-bar input {
+  flex: 1;
+  padding: 10px 10px 10px 35px;
+  border: 1px solid var(--dark-gray);
+  border-radius: 10px;
+  font-size: 14px;
+  background-color: var(--white);
+  color: black;
+}
+
+.search-bar svg {
+  color: var(--dark-gray);
+  width: 20px;
+  height: 20px;
+}
+
+.top-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.search-bar {
+  width: 50%;
+  position: relative;
+}
+
+.search-bar .search-icon {
+  position: absolute;
+  top: 20%;
+  left: 1%;
+}
+
+.nav-help-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+
+.nav-help-content {
+  background-color: var(--white);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+}
+
+.nav-faqs {
+  font-family: sans-serif;
+  width: -webkit-fill-available;
+  padding: 20px;
+}
+
+.nav-faqs h2 {
+  color: black;
+  font-size: 16px;
+  font-weight: normal;
+  margin-top: 0px;
+}
+
+.category-tabs {
+  display: flex;
+  justify-content: space-around;
+  background-color: var(--orange);
+  border-radius: 20px;
+  margin: 0px 100px 20px 100px;
+}
+
+.category-tabs .MuiTab-root {
+  flex: 1;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  transition: color 0.3s;
+  border-radius: 15px;
+  min-height: auto;
+  color: var(--white);
+}
+
+.category-tabs .MuiTab-root.Mui-selected {
+  color: var(--orange);
+  background-color: var(--white);
+  margin: 5px;
+  border-radius: 15px;
+  border: none;
+}
+
+.category-tabs .MuiTabs-indicator {
+  display: none;
+}
+
+.needhelp-container {
+  min-height: 100vh;
+  background-color: var(--bg);
+}
+
+.needhelp-header {
+  background-color: var(--orange);
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.needhelp-header a {
+  text-decoration: none;
+}
+
+.needhelp-header span {
+  color: white;
+  font-size: 1.25rem;
+  font-weight: 600;
+  cursor: pointer;
+}

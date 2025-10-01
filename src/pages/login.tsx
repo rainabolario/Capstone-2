@@ -1,192 +1,123 @@
 import type React from "react"
 import { useState } from "react"
+import { Link } from "react-router-dom"
+import "../css/login.css"
 
 interface LoginProps {
-  onLogin: (email: string) => void;
+  onLogin: (email: string) => void
 }
 
 const LoginPage: React.FC<LoginProps> = ({ onLogin }) => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault()
     if (email && password) {
-      console.log("Login attempt:", { email, password });
-      onLogin(email);
+      console.log("Login attempt:", { email, password })
+      onLogin(email)
     }
-  };
+  }
 
   return (
-    <div
-      style={{
-    position: "fixed",
-    top: 0,
-    left: 0,
-    width: "100vw",
-    height: "100vh",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: "18rem", 
-    backgroundImage: 'url("/kc\'s bg.png")',
-    backgroundSize: "cover",
-    backgroundPosition: "center",
-    backgroundRepeat: "no-repeat",
-    margin: 0,
-    padding: "0 6rem",
-    boxSizing: "border-box",
-    zIndex: 1000,
-      }}
-    >
-      <div
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: "rgba(241, 143, 38, 0.4)",
-          zIndex: 1,
-        }}
-      />
-
-      {/* Left Side */}
-      <div
-        style={{
-          position: "relative",
-          zIndex: 2,
-          width: "550px",
-          height: "300px",
-          backgroundImage: 'url("/Kc\'s logo.png")',
-          backgroundSize: "contain",
-          backgroundRepeat: "no-repeat",
-          backgroundPosition: "center",
-          flexShrink: 0, 
-          //padding: "6rem", 
-        }}
-      />
-
-      {/* Right Side - Login Form */}
-      <div
-        style={{
-          maxWidth: "330px", 
-          width: "100%",
-          zIndex: 2,
-          position: "relative",
-          padding: "1.5rem",    
-          flexShrink: 0,
-          backgroundColor: "white",
-          borderRadius: "20px", 
-        }}
-      >
-        <h2
-          style={{
-            fontSize: "1.5rem",
-            fontWeight: "bold",
-            textAlign: "center",
-            marginBottom: "2rem",
-            color: "#000000ff",
-          }}
-        >
-          LOGIN
-        </h2>
-
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: "1.5rem", textAlign: "left" }}>
-            <label
-              style={{
-                display: "block",
-                fontSize: "1rem",
-                fontWeight: "500",
-                color: "#000000ff",
-                marginBottom: "0.5rem",
-              }}
-            >
-              Email Address
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="user@gmail.com"
-              style={{
-                width: "100%",
-                padding: "0.75rem",
-                border: "1px solid #d1d5db",
-                borderRadius: "0.5rem",
-                fontSize: "1rem",
-                boxSizing: "border-box",
-                backgroundColor: "white",
-                color: "#000000",
-              }}
-              required
-            />
-          </div>
-
-          <div style={{ marginBottom: "1rem", textAlign: "left" }}>
-            <label
-              style={{
-                display: "block",
-                fontSize: "1rem",
-                fontWeight: "500",
-                color: "#000000ff",
-                marginBottom: "0.5rem",
-              }}
-            >
-              Password
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••"
-              style={{
-                width: "100%",
-                padding: "0.75rem",
-                border: "1px solid #d1d5db",
-                borderRadius: "0.5rem",
-                fontSize: "1rem",
-                transition: "all 0.2s",
-                boxSizing: "border-box",
-                backgroundColor: "white",
-                color: "#000000",
-              }}
-              required
-            />
-          </div>
-
-          <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
-            <a
-              href="#"
-              style={{
-                color: "#ef4444",
-                fontSize: "1rem",
-              }}
-            >
-              Forgot Password?
-            </a>
-          </div>
-
-          <button
-            type="submit"
-            style={{
-              width: "100%",
-              backgroundColor: "#000000",
-              color: "white",
-              padding: "0.75rem",
-              borderRadius: "0.5rem",
-              fontWeight: "500",
-              cursor: "pointer",
-              fontSize: "1rem",
-              transition: "background-color 0.2s",
-            }}
-          >
-            Log In
-          </button>
-        </form>
+    <>
+      {/* Header Bar */}
+      <div className="header-bar">
+          <img 
+            src="/Kc's lola-logo.png" 
+            alt="KC's Kitchen Logo" 
+            className="header-logo"
+          />
+        <span>KC&apos;s Kitchen</span>
+        <Link to="/need-help" className="need-help-link">Need Help?</Link>
       </div>
-    </div>
+
+      <div className="login-container">
+        <div className="login-overlay" />
+
+        {/* Logo Section */}
+        <div className="login-logo" />
+
+        {/* Login Form Section */}
+        <div className="login-form-box">
+          <h2 className="login-title">LOGIN</h2>
+          <p className="login-subtitle">Enter your email and password below to login to your account</p>
+
+          <form onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label>Email Address</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="user@gmail.com"
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Password</label>
+              <div className="password-input-wrapper">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••"
+                  required
+                />
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                      <line x1="1" y1="1" x2="23" y2="23" />
+                    </svg>
+                  ) : (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div className="forgot-password">
+              <a href="#">Forgot Password?</a>
+            </div>
+
+            <button type="submit" className="submit-button">
+              Log In
+            </button>
+          </form>
+        </div>
+      </div>
+    </>
   )
 }
 

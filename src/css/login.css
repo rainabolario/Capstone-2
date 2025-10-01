@@ -1,0 +1,206 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap");
+
+:root {
+  --orange: #ec7a1c;
+  --light-orange: #f1c2a7;
+  --bg: #f1eee9;
+  --white: #f9f9fa;
+  --dark-gray: #6b7280;
+  --red: #e33e3e;
+  --general-font: "Inter", sans-serif;
+}
+
+body {
+  margin: 0;
+  font-family: var(--general-font);
+}
+
+.header-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background-color: var(--orange);
+  color: white;
+  font-weight: 600;
+  font-size: 1.2rem;
+  /*font-style:*/
+  padding: 0.75rem 2rem;
+  z-index: 10;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+
+  display: flex;
+  align-items: center;
+  gap: 0.5rem; /* space between logo and title */
+}
+
+.header-logo {
+  width: 40px; /* adjust as needed */
+  height: 40px; /* adjust as needed */
+  object-fit: contain;
+}
+
+.header-title {
+  font-weight: 700;
+  font-size: 1.2rem;
+}
+
+.need-help-link {
+  color: white;
+  font-weight: 500;
+  text-decoration: none;
+  font-size: 0.95rem;
+  margin-left: auto; 
+  margin-right: 5rem; 
+  text-decoration: underline; 
+}
+
+.need-help-link:hover {
+  color: #000000; 
+}
+
+.login-form-box {
+  max-width: 500px;
+  width: 100%;
+  z-index: 2;
+  position: relative;
+  padding: 1.25rem 1.75rem;
+  background-color: white;
+  border-radius: 15px;
+  flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  min-height: 430px; 
+  box-sizing: border-box;
+  align-items: flex-start; /* align to top instead of center */
+  padding-top: 0;
+}
+
+
+ .login-form-box .submit-button {
+  width: 100%;
+  background-color: #0d0d0c !important;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  cursor: pointer;
+  font-size: 1rem;
+ }
+
+.login-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 15rem; 
+  background-image: url("/kc's bg.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  padding: 0 4rem;
+  box-sizing: border-box;
+}
+
+.login-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(241, 143, 38, 0.4);
+  z-index: 1;
+}
+
+.login-logo {
+  position: relative;
+  z-index: 2;
+  width: 480px; 
+  height: 220px;
+  background-image: url("/Kc's logo.png");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  flex-shrink: 0;
+}
+
+.login-title {
+  font-size: 2rem;
+  font-weight: 800; /* extra-bold */
+  text-align: left;
+  margin-bottom: 0.5rem;
+  color: #000000ff;
+}
+
+.login-subtitle {
+  font-size: 0.95rem;
+  color: var(--dark-gray);
+  text-align: center;
+  margin-bottom: 1.25rem; 
+}
+
+.form-group {
+  margin-bottom: 1rem; 
+  text-align: left;
+}
+
+.form-group label {
+  display: block;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #000000ff;
+  margin-bottom: 0.5rem;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  background-color: white;
+  color: #000000;
+  box-sizing: border-box;
+}
+
+
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input-wrapper input {
+  padding-right: 3rem;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 0.75rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dark-gray);
+  transition: color 0.2s;
+}
+
+.password-toggle:hover {
+  color: #000000;
+}
+
+.forgot-password {
+  text-align: center;
+  margin-bottom: 1rem; /* Reduced bottom margin before submit button */
+}
+
+.forgot-password a {
+  color: var(--red);
+  font-size: 1rem;
+  text-decoration: none;
+}
