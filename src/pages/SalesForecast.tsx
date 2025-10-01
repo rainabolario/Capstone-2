@@ -1,5 +1,6 @@
 import "../css/SalesForecast.css"
 import Sidebar from "../components/Sidebar"
+import { Divider, Typography } from "@mui/material"
 
 interface SalesForecastProps {
   currentUser: string
@@ -13,6 +14,12 @@ const SalesForecast: React.FC<SalesForecastProps> = ({ currentUser, onLogout }) 
                 <div className="forecast-content">
                     <div className="forecast-header">
                         <h1>SALES FORECAST</h1>
+                    </div>
+                    <div className="helper-text">
+                    <Typography variant="caption" sx={{ color: 'gray', fontSize: '14px', mb:1, mt: 1 }}>
+                        This dashboard provides an overview of all sales activity. Use the tools below to filter, the presented data, and visualize sales trends over time.
+                    </Typography>
+                    <Divider />
                     </div>
                     <div className="forecast-grid">
                         <div className="forecast-div1">

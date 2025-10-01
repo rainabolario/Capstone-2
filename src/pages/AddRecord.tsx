@@ -198,7 +198,7 @@ export default function AddRecord({ onLogout }: AddRecordProps) {
           {activeStep === 2 && <ReviewSubmit data={formData} />}
         </div>
 
-        <div className='button-form-container'>
+        <div className='add-button-form-container'>
           <Button
             disabled={activeStep === 0}
             onClick={handleBack}
@@ -211,6 +211,7 @@ export default function AddRecord({ onLogout }: AddRecordProps) {
               variant="contained"
               onClick={handleSubmit}
               className='submit-button'
+              sx={{ width: '150px' }}
             >
               Submit
             </Button>

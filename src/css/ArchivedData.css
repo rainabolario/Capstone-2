@@ -32,24 +32,24 @@
 
 .archived-header-section {
   background-color: rgb(242, 242, 235);
-  padding: 16px 24px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 25px;
 }
 
 .archived-page-title {
   font-family: var(--general-font);
   color: black;
   font-size: 24px;
+  margin-top: 30px;
+  margin-bottom: 0px;
 }
 
 .archived-action-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  margin: 16px 0px;
   gap: 20px;
 }
 

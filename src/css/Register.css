@@ -58,9 +58,6 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem; 
-  padding-bottom: 0.5rem;
-  border-bottom: 2px solid var(--light-orange);
 }
 
 .register-header h2 {
@@ -87,7 +84,8 @@ body {
 .register-form {
   display: flex;
   flex-direction: column;
-  gap: 0.8rem; 
+  gap: 25px; 
+  margin-top: 20px;
 }
 
 .register-form .form-group label {
@@ -140,9 +138,9 @@ body {
 
 .button-group {
   display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  margin-top: 0.75rem;
+  gap: 10px;
+  margin-top: 20px;
+  justify-content: flex-end;
 }
 
 .submit-button {

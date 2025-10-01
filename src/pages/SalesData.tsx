@@ -5,7 +5,7 @@ import "../css/SalesData.css";
 import { AddOutlined, Inventory2Outlined, EditOutlined } from "@mui/icons-material";
 import { supabase } from "../supabaseClient";
 import { Checkbox } from "@mui/material";
-import Button from "@mui/material/Button";
+import { Typography, Divider, Button } from "@mui/material";
 
 interface SalesRecord {
   id: string;
@@ -183,6 +183,10 @@ const SalesData: React.FC<SalesDataProps> = () => {
             <h1 className="page-title">SALES DATA</h1>
           </div>
         </div>
+        <Typography variant="caption" sx={{ color: 'gray', fontSize: '14px', mb:1, mt: 1 }}>
+                This contains a detailed list of all transactions. You can add, edit, or archive records as needed.
+          </Typography>
+          <Divider />
 
         <div className="action-bar">
           <div className="search-container">

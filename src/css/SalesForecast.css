@@ -32,6 +32,7 @@
     font-family: var(--general-font);
     color: black;
     font-size: 24px;
+    margin-bottom: 8px;
 }
 
 .forecast-div1, .forecast-div2, .forecast-div3, .forecast-div4, .forecast-div5, .forecast-div6, .forecast-div7, .forecast-div8, .forecast-div9{

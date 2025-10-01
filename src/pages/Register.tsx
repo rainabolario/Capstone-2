@@ -1,7 +1,16 @@
 import type React from "react"
 import { useState } from "react"
 import "../css/Register.css"
-import { Eye, EyeOff } from "lucide-react"
+import { Visibility, VisibilityOff } from "@mui/icons-material"
+import { 
+  Divider, 
+  Typography, 
+  TextField, 
+  MenuItem, 
+  InputAdornment, 
+  IconButton,
+  Button
+} from "@mui/material"
 
 interface RegisterProps {
   onClose: () => void
@@ -30,65 +39,111 @@ const Register: React.FC<RegisterProps> = ({ onClose, onSubmit }) => {
             ×
           </button>
         </div>
+        <Typography variant="caption" sx={{ color: 'gray' }}>
+          Fill in the details to add a new user
+        </Typography>
+        <Divider  />
 
         <form onSubmit={handleSubmit} className="register-form">
-          <div className="form-group">
-            <label htmlFor="name">Name</label>
-            <input
-              type="text"
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Enter full name"
-              required
-            />
-          </div>
+          <TextField
+            label="Name"
+            variant="outlined"
+            id="name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Enter full name"
+            required
+            fullWidth
+            InputLabelProps={{ shrink: true }}
+          />
 
-          <div className="form-group">
-            <label htmlFor="email">Email</label>
-            <input
-              type="email"
-              id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="example@ust.edu.ph"
-              required
-            />
-          </div>
+          <TextField
+            label="Email"
+            variant="outlined"
+            id="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="example@ust.edu.ph"
+            required
+            fullWidth
+            InputLabelProps={{ shrink: true }}
+          />
 
-          <div className="form-group">
-            <label htmlFor="role">Role</label>
-            <select id="role" value={role} onChange={(e) => setRole(e.target.value)} required>
-              <option value="Staff">Staff</option>
-              <option value="Admin">Admin</option>
-            </select>
-          </div>
+          <TextField
+            label="Role"
+            variant="outlined"
+            id="role"
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+            fullWidth
+            required
+            select
+            helperText={!role ? "Please select a role" : ""}
+            error={!role}
+            InputLabelProps={{ shrink: true }}
+          >
+            <MenuItem value="" disabled><em>Select Role</em></MenuItem>
+            <MenuItem value="Staff">Staff</MenuItem>
+            <MenuItem value="Admin">Admin</MenuItem>
+          </TextField>
 
-          <div className="form-group">
-            <label htmlFor="password">Password</label>
-            <div className="password-input-wrapper">
-              <input
-                type={showPassword ? "text" : "password"}
-                id="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter password"
-                required
-              />
-              <button type="button" className="password-toggle" onClick={() => setShowPassword(!showPassword)}>
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-              </button>
-            </div>
-          </div>
+          <TextField
+            label="Password"
+            variant="outlined"
+            id="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Enter password"
+            required
+            fullWidth
+            InputLabelProps={{ shrink: true }}
+            InputProps={{
+                endAdornment: (
+                    <InputAdornment position="end">
+                    <IconButton
+                        aria-label="toggle password visibility"
+                        onClick={() => setShowPassword(!showPassword)}
+                        edge="end"
+                        sx={{ color: "gray", "&:hover": { color: "#ec7a1c" } }}
+                    >
+                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                    </InputAdornment>
+                ),
+                }}
+          />
 
           <div className="button-group">
-            <button type="submit" className="submit-button">
-              Add User
-            </button>
-            <button type="button" className="cancel-button" onClick={onClose}>
-              Cancel
-            </button>
-          </div>
+                <Button 
+                    variant="outlined" 
+                    onClick={onClose}
+                    sx={{ 
+                        color: 'gray', 
+                        padding: '5px 25px',
+                        borderColor: 'gray', 
+                        '&.MuiButton-outlined:hover': {  
+                            backgroundColor: '#ec7a1c',
+                            borderColor: '#ec7a1c',
+                            color: 'white'
+                        }, 
+                        }}
+                >
+                    Cancel
+                </Button>
+                <Button
+                    variant="contained" 
+                    onClick={onClose}
+                    type="submit"
+                    sx={{ 
+                        color: 'white', 
+                        borderColor: 'gray', 
+                        backgroundColor: '#ec7a1c',
+                        padding: '5px 35px'
+                        }}
+                >
+                    Add User
+                </Button>
+            </div>
         </form>
       </div>
     </div>

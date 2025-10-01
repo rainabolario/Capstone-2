@@ -7,6 +7,8 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import { User2Icon } from "lucide-react";
 import Register from "./Register";
+import EditUserModal from "./EditAccount";
+import { Divider, Typography } from "@mui/material";
 
 interface User {
     id: number;
@@ -17,10 +19,12 @@ interface User {
     }
 
     const UserManagement: React.FC = () => {
-   const [openRegister, setOpenRegister] = useState(false);
+    const [openRegister, setOpenRegister] = useState(false);
     const [users, setUsers] = useState<User[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedUsers, setSelectedUsers] = useState<Set<number>>(new Set());
+    const [openEditModal, setOpenEditModal] = useState(false);
+    const [userToEdit, setUserToEdit] = useState<User | null>(null);
 
     useEffect(() => {
         const initialUsers: User[] = [
@@ -61,6 +65,25 @@ interface User {
         }
     };
 
+    const handleOpenEditModal = () => {
+    // Get the ID of the single selected user
+    const selectedId = selectedUsers.values().next().value;
+    const user = users.find(u => u.id === selectedId);
+        if (user) {
+        setUserToEdit(user);
+        setOpenEditModal(true);
+        }
+    };
+
+    const handleUpdateUser = (updatedUser: User) => {
+    setUsers(prevUsers =>
+        prevUsers.map(user => (user.id === updatedUser.id ? updatedUser : user))
+        );
+    setOpenEditModal(false);
+    setUserToEdit(null);
+    setSelectedUsers(new Set()); // Clear selection after editing
+    };
+
     const numSelected = selectedUsers.size;
     const rowCount = filteredUsers.length;
 
@@ -70,6 +93,10 @@ interface User {
         <Sidebar />
         <div className="user-management-content">
             <h2>USER MANAGEMENT</h2>
+            <Typography variant="caption" sx={{ color: 'gray', fontSize: '14px', mb:1, mt: 1 }}>
+                Manage all user accounts here. You can add, edit, or delete user profiles as needed.
+            </Typography>
+            <Divider />
 
             <div className="action-container">
                 <div className="search-container">
@@ -115,6 +142,7 @@ interface User {
                         }}
                         disabled={numSelected === 0}
                         startIcon={<EditIcon />}
+                        onClick={handleOpenEditModal}
                     >
                         Edit User
                     </Button>
@@ -189,6 +217,14 @@ interface User {
             ]);
             setOpenRegister(false);
             }}
+        />
+        )}
+
+        {openEditModal && userToEdit && (
+        <EditUserModal
+            user={userToEdit}
+            onClose={() => setOpenEditModal(false)}
+            onSubmit={handleUpdateUser}
         />
         )}
     </div>

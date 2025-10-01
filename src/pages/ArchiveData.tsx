@@ -2,8 +2,12 @@ import React, { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import "../css/ArchivedData.css";
 import { supabase } from "../supabaseClient";
-import { Checkbox } from "@mui/material";
-import Button from "@mui/material/Button";
+import { 
+  Checkbox,
+  Typography,
+  Divider,
+  Button
+} from "@mui/material";
 import RestoreIcon from '@mui/icons-material/Restore';
 
 interface SalesRecord {
@@ -128,6 +132,10 @@ const ArchivedData: React.FC = () => {
             <h1 className="archived-page-title">ARCHIVED DATA</h1>
           </div>
         </div>
+        <Typography variant="caption" sx={{ color: 'gray', fontSize: '14px', mb:1, mt: 1 }}>
+          This contains all previously archived items. You can restore them to the sales data page.
+        </Typography>
+        <Divider />
 
         {/* Action Bar */}
         <div className="archived-action-bar">

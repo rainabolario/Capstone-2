@@ -3,7 +3,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { TextField, Button, Divider } from '@mui/material';
 import Sidebar from '../components/Sidebar';
 import '../css/EditRecord.css';
-import { User2Icon } from 'lucide-react';
 
 interface SalesRecord {
     id: string;
@@ -201,5 +200,3 @@ const EditRecord: React.FC = () => {
 };
 
 export default EditRecord;
-
-//padding: 40px 90px 0px 90px;

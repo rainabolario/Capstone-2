@@ -1,6 +1,7 @@
 import '../css/SalesOverview.css';
 import Sidebar from '../components/Sidebar';
 import type React from 'react';
+import { Divider, Typography } from '@mui/material';
 
 interface SalesOverviewProps {
     currentUser: string
@@ -15,6 +16,13 @@ const SalesOverview: React.FC<SalesOverviewProps> = ({ currentUser, onLogout }) 
                     <div className="overview-header">
                         <h1>SALES OVERVIEW AND HISTORICAL DATA</h1>
                     </div>
+                    <div className="helper-text">
+                    <Typography variant="caption" sx={{ color: 'gray', fontSize: '14px', mb:1, mt: 1 }}>
+                        This dashboard provides an overview of all sales activity. Use the tools below to filter, the presented data, and visualize sales trends over time.
+                    </Typography>
+                    <Divider />
+                    </div>
+
                     <div className="chart-grid">
                         <div className="div1">
                             <div className="div1-content">Total Sales</div>

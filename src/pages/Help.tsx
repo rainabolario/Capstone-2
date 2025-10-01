@@ -51,6 +51,11 @@ const Help: React.FC<HelpProps> = ({ onLogout }) => {
               className="category-tabs"
               value={activeTab}
               onChange={handleTabChange}
+              sx={{
+                '& .MuiTabs-flexContainer': {
+                  justifyContent: 'space-between'
+                },
+              }}
             >
               {faqData.map((category) => (
                 <Tab key={category.id} label={category.name} />
