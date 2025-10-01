@@ -1,100 +1,287 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap");
 
-:root{
-    /* Colors */
-    --orange : #EC7A1C;
-    --light-orange: #F1C2A7;
-    --bg: #F1EEE9;
-    --white: #F9F9FA;
-    --dark-gray: #6b7280;
-    --red: #E33E3E;
+:root {
+  /* Colors */
+  --orange: #ec7a1c;
+  --light-orange: #f1c2a7;
+  --bg: #f1eee9;
+  --white: #f9f9fa;
+  --dark-gray: #6b7280;
+  --red: #e33e3e;
 
-    /* Font */
-    --general-font: "Inter", sans-serif;
+  /* Font */
+  --general-font: "Inter", sans-serif;
 }
 
-.account-container{
-    display: flex;
-    flex-direction: row;
-    background-color: var(--bg);
+.account-container {
+  display: flex;
+  flex-direction: row;
+  background-color: var(--bg);
+  min-height: 100vh;
 }
 
-.account-content{
-    flex: 1;
-    display: flex;
-    flex-direction: column;
+.account-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
-.account-content h1{
-    font-family: var(--general-font);
-    color: black;
-    font-size: 24px;
-    margin: 30px 0px 0px 20px;
+/* Added header styling */
+.account-header {
+  margin: 30px 20px 0px 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #ccc;
+}
+
+.account-content h1 {
+  font-family: var(--general-font);
+  color: black;
+  font-size: 24px;
+  margin: 0px 0px 10px 0px;
+  font-weight: 700;
+}
+
+/* Added subtitle styling */
+.account-subtitle {
+  font-family: var(--general-font);
+  color: var(--dark-gray);
+  font-size: 14px;
+  margin: 0px;
+}
+
+/* Added warning banner with orange color */
+.security-warning-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 15px;
+  background-color: #fed7aa;
+  border: 1px solid #fb923c;
+  border-radius: 8px;
+  padding: 15px 20px;
+  margin: 20px;
+}
+
+.security-warning-banner.success {
+  background-color: #d1fae5;
+  border-color: #10b981;
+}
+
+.security-warning-banner.success .warning-icon {
+  color: #065f46;
+}
+
+.security-warning-banner.success .warning-content h3,
+.security-warning-banner.success .warning-content p {
+  color: #065f46;
+}
+
+.warning-icon {
+  color: #9a3412;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.warning-content h3 {
+  font-family: var(--general-font);
+  color: #9a3412;
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0px 0px 5px 0px;
+}
+
+.warning-content p {
+  font-family: var(--general-font);
+  color: #9a3412;
+  font-size: 13px;
+  margin: 0px;
+  line-height: 1.5;
+}
+
+/* Added main layout with tabs */
+.account-main-layout {
+  display: flex;
+  gap: 20px;
+  margin: 20px;
+}
+
+/* Added tab navigation with orange active state */
+.account-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 0px;
+  min-width: 200px;
+}
+
+.tab-button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background-color: transparent;
+  border: none;
+  padding: 15px 20px;
+  font-family: var(--general-font);
+  font-size: 14px;
+  color: var(--dark-gray);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s;
+  border-left: 3px solid transparent;
+}
+
+.tab-button:hover {
+  background-color: rgba(236, 122, 28, 0.1);
+}
+
+.tab-button.active {
+  background-color: var(--orange);
+  color: white;
+  border-left: 3px solid var(--orange);
+}
+
+.tab-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.account-settings-content {
+  flex: 1;
 }
 
 .profile-container,
 .password-container,
-.delete-container{
-    display: flex;
-    flex-direction: column;
-    padding: 25px;
-    margin: 20px;
-    border-radius: 10px;
-    background-color: var(--white);
-    box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.25);
+.delete-container {
+  display: flex;
+  flex-direction: column;
+  padding: 25px;
+  /* Added margin-bottom to separate containers */
+  margin-bottom: 20px;
+  border-radius: 10px;
+  background-color: var(--white);
+  box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.25);
 }
 
 .profile-container h2,
 .password-container h2,
-.delete-container h2{
-    font-family: var(--general-font);
-    color: black;
-    font-size: 16px;
-    margin: 0px 0px 10px 0px;
-    font-weight: normal;
+.delete-container h2 {
+  font-family: var(--general-font);
+  color: black;
+  font-size: 16px;
+  margin: 0px 0px 10px 0px;
+  font-weight: normal;
 }
 
-.profile-content{
-    display: flex;
-    flex-direction: row;
-    color: black;
-    gap: 10px;
+/* Updated security container h2 to match profile and password containers */
+.security-container h2 {
+  font-family: var(--general-font);
+  color: black;
+  font-size: 16px;
+  margin: 0px 0px 10px 0px;
+  font-weight: normal;
+}
+
+.security-container {
+  display: flex;
+  flex-direction: column;
+  padding: 25px;
+  border-radius: 10px;
+  background-color: var(--white);
+  box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.25);
+}
+
+/* Updated security description to match other section descriptions */
+.security-description {
+  font-family: var(--general-font);
+  color: var(--dark-gray);
+  font-size: 14px;
+  margin: 0px 0px 25px 0px;
+  line-height: 1.5;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+/* Added security question group styling */
+.security-question-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 25px;
+}
+
+/* Updated security question labels to match other input labels */
+.security-question-group label {
+  font-family: var(--general-font);
+  color: var(--dark-gray);
+  font-size: 12px;
+  font-weight: normal;
+  margin-bottom: 10px;
+}
+
+.security-question-group .answer-label {
+  margin-top: 15px;
+}
+
+/* Fixed input width to prevent overflow */
+.security-select,
+.security-input {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  border-radius: 8px;
+  background-color: white;
+  border: 1px solid #ccc;
+  padding: 12px 15px;
+  font-family: var(--general-font);
+  font-size: 14px;
+  color: var(--dark-gray);
+}
+
+.security-select:focus,
+.security-input:focus {
+  outline: none;
+  border-color: var(--orange);
+}
+
+.profile-content {
+  display: flex;
+  flex-direction: row;
+  color: black;
+  gap: 10px;
 }
 
 .password-content,
-.delete-content{
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+.delete-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .profile-content input,
 .password-content input,
-.delete-content input{
-    width: -webkit-fill-available;
-    border-radius: 10px;
-    background-color: transparent;
-    border: 1px solid #ccc;
-    padding: 10px 15px;
-    margin-bottom: 10px;
-    color: black;
+.delete-content input {
+  width: -webkit-fill-available;
+  border-radius: 10px;
+  background-color: transparent;
+  border: 1px solid #ccc;
+  padding: 10px 15px;
+  margin-bottom: 10px;
+  color: black;
 }
 
-.role-container select{
-    width: -webkit-fill-available;
-    border-radius: 10px;
-    background-color: transparent;
-    border: 1px solid #ccc;
-    padding: 10px 15px;
-    margin-bottom: 10px;
-    color: black;
+.role-container select {
+  width: -webkit-fill-available;
+  border-radius: 10px;
+  background-color: transparent;
+  border: 1px solid #ccc;
+  padding: 10px 15px;
+  margin-bottom: 10px;
+  color: black;
 }
 
 .first-name-container,
 .last-name-container,
 .email-container,
-.role-container{
-    width: 100%;
+.role-container {
+  width: 100%;
 }
 
 .first-name-container p,
@@ -105,53 +292,149 @@
 .new-password-container p,
 .reenter-password-container p,
 .type-email-container p,
-.type-delete-container p{
-    font-family: var(--general-font);
-    font-size: 12px;
-    margin: 0px;
-    color: var(--dark-gray);
+.type-delete-container p {
+  font-family: var(--general-font);
+  font-size: 12px;
+  margin: 0px;
+  color: var(--dark-gray);
 }
 
-
-.delete-instructions{
-    font-family: var(--general-font);
-    font-size: 12px;
-    margin: 0px 0px 10px 10px;
-    background-color: var(--red);
-    border-radius: 10px;
-    padding: 10px 15px;
+.delete-instructions {
+  font-family: var(--general-font);
+  font-size: 12px;
+  margin: 0px 0px 10px 0px;
+  background-color: var(--red);
+  border-radius: 10px;
+  padding: 10px 15px;
 }
 
-.delete-instructions p{
-    color: var(--white);
-    margin-left: 20px;
-    margin-top: 10px;
-    margin-bottom: 10px;
-    font-size: 14px;
+.delete-instructions p {
+  color: var(--white);
+  margin-left: 20px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  font-size: 14px;
 }
 
-.delete-instructions svg{
-    vertical-align: text-top;
-    color: var(--white);
-    height: 18px;
+.delete-instructions svg {
+  vertical-align: text-top;
+  color: var(--white);
+  height: 18px;
 }
 
-.button-content{
-    display: flex;
-    flex-direction: row-reverse;
-    gap: 10px;
+.button-content {
+  display: flex;
+  flex-direction: row-reverse;
+  gap: 10px;
 }
 
-.button-content button{
-    background-color: transparent;
-    border: 1px solid var(--orange);
-    color: var(--orange);
-    margin: 10px;
-    padding: 8px 25px;
+.button-content button {
+  background-color: transparent;
+  border: 1px solid var(--orange);
+  color: var(--orange);
+  margin: 10px;
+  padding: 8px 25px;
+  border-radius: 8px;
+  font-family: var(--general-font);
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-.button-content button:hover{
-    background-color: var(--orange);
-    color: white;
-    cursor: pointer;
+.button-content button:hover {
+  background-color: var(--orange);
+  color: white;
+}
+
+/* Added delete button styling */
+.delete-button {
+  background-color: transparent;
+  border: 1px solid var(--red);
+  color: var(--red);
+}
+
+.delete-button:hover {
+  background-color: var(--red);
+  color: white;
+}
+
+/* Added modal styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: white;
+  border-radius: 12px;
+  padding: 30px;
+  max-width: 450px;
+  width: 90%;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  text-align: center;
+}
+
+.modal-content h3 {
+  font-family: var(--general-font);
+  font-size: 20px;
+  font-weight: 600;
+  color: black;
+  margin: 0 0 15px 0;
+}
+
+.modal-content p {
+  font-family: var(--general-font);
+  font-size: 14px;
+  color: var(--dark-gray);
+  margin: 0 0 25px 0;
+  line-height: 1.5;
+}
+
+.success-icon {
+  width: 48px;
+  height: 48px;
+  color: #10b981;
+  margin: 0 auto 15px;
+}
+
+.modal-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.modal-cancel,
+.modal-confirm {
+  padding: 10px 25px;
+  border-radius: 8px;
+  font-family: var(--general-font);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.modal-cancel {
+  background-color: #f3f4f6;
+  color: var(--dark-gray);
+}
+
+.modal-cancel:hover {
+  background-color: #e5e7eb;
+}
+
+.modal-confirm {
+  background-color: var(--orange);
+  color: white;
+}
+
+.modal-confirm:hover {
+  background-color: #d66a15;
 }
