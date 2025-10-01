@@ -6,6 +6,7 @@ import SearchIcon from "@mui/icons-material/Search";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import { User2Icon } from "lucide-react";
+import Register from "./Register";
 
 interface User {
     id: number;
@@ -16,6 +17,7 @@ interface User {
     }
 
     const UserManagement: React.FC = () => {
+   const [openRegister, setOpenRegister] = useState(false);
     const [users, setUsers] = useState<User[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedUsers, setSelectedUsers] = useState<Set<number>>(new Set());
@@ -62,6 +64,7 @@ interface User {
     const numSelected = selectedUsers.size;
     const rowCount = filteredUsers.length;
 
+    
     return (
         <div className="user-management-container">
         <Sidebar />
@@ -92,6 +95,7 @@ interface User {
                             padding: '8px 25px',
                         }}
                         startIcon={<User2Icon />}
+                            onClick={() => setOpenRegister(true)}    
                     >
                         Add User
                     </Button>
@@ -174,7 +178,20 @@ interface User {
             </table>
             </div>
         </div>
-        </div>
+        
+        {openRegister && (
+        <Register
+            onClose={() => setOpenRegister(false)}
+            onSubmit={(newUser) => {
+            setUsers((prev) => [
+                ...prev,
+                { id: prev.length + 1, ...newUser, role: newUser.role as 'Admin' | 'Staff' },
+            ]);
+            setOpenRegister(false);
+            }}
+        />
+        )}
+    </div>
     );
 };
 

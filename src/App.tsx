@@ -14,6 +14,7 @@ import UserManagement from "./pages/UserManage"
 import Account from "./pages/Account"
 import Help from "./pages/Help"
 import NeedHelp from "./pages/NeedHelp"
+import ForgotPassword from "./pages/ForgotPassword"
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
@@ -45,7 +46,9 @@ function App() {
           path="/login"
           element={isAuthenticated ? <Navigate to="/salesoverview" replace /> : <Login onLogin={handleLogin} />}
         />
-         <Route path="/need-help" element={<NeedHelp />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/need-help" element={<NeedHelp />} />
+        
         <Route
           path="/salesoverview"
           element={

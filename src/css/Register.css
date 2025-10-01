@@ -1,0 +1,208 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap");
+
+:root {
+  --orange: #ec7a1c;
+  --orange-dark: #d66a0c;
+  --light-orange: #fce7da;
+  --bg: #f1eee9;
+  --white: #ffffff;
+  --dark-gray: #6b7280;
+  --red: #e33e3e;
+  --general-font: "Inter", sans-serif;
+}
+
+body {
+  margin: 0;
+  font-family: var(--general-font);
+  background: var(--bg);
+  color: #111;
+}
+
+.register-overlay,
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.45); 
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.register-modal,
+.modal-content {
+  background: var(--white);
+  border-radius: 14px;
+  padding: 1.25rem;
+  max-width: 420px; 
+  width: 90%;
+  box-shadow: 0px 6px 18px rgba(0, 0, 0, 0.25);
+  animation: slideUp 0.3s ease-in-out;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(40px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.register-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem; 
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--light-orange);
+}
+
+.register-header h2 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--black);
+  margin: 0;
+  margin-top: 1rem;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--dark-gray);
+  transition: color 0.2s, transform 0.2s;
+}
+.close-button:hover {
+  color: var(--orange-dark);
+  transform: rotate(90deg);
+}
+
+.register-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem; 
+}
+
+.register-form .form-group label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 0.3rem;
+}
+
+.register-form .form-group input,
+.register-form .form-group select {
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  background-color: #fdfdfd;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.register-form .form-group input:focus,
+.register-form .form-group select:focus {
+  border-color: var(--orange);
+  box-shadow: 0 0 4px rgba(236, 122, 28, 0.3);
+  outline: none;
+}
+
+.password-input-wrapper {
+  position: relative;
+}
+.password-input-wrapper input {
+  padding-right: 2rem;
+}
+.password-toggle {
+  position: absolute;
+  right: 0.6rem;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 1rem;
+  color: var(--dark-gray);
+  transition: color 0.2s;
+}
+
+.password-toggle:hover {
+  color: var(--orange);
+}
+
+.button-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.submit-button {
+  width: 100%;
+  padding: 0.75rem; 
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 1rem;
+  border: none;
+  transition: background 0.25s, transform 0.15s;
+}
+
+.cancel-button {
+  width: 100%;
+  padding: 0.30rem;  
+  border-radius: 10px;
+  font-weight: 650; 
+  cursor: pointer;
+  font-size: 1rem;
+  border: none;
+  background-color: var(--orange);
+  color: white;
+  transition: background 0.25s, transform 0.15s;
+}
+
+.submit-button {
+  background-color: #2d3748;
+  color: white;
+}
+.submit-button:hover {
+  background-color: #1a202c;
+  transform: translateY(-2px);
+}
+
+.cancel-button {
+  background-color: var(--orange);
+  color: white;
+}
+.cancel-button:hover {
+  background-color: var(--orange-dark);
+  transform: translateY(-2px);
+}
+
+.register-form .form-group select {
+  width: 100%;
+  padding: 0.75rem 2rem 0.75rem 1rem; 
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  font-size: 1rem;
+  background-color: #fdfdfd;
+  color: #000;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg width='20' height='20' viewBox='0 0 20 20' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M5 7L10 12L15 7' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); 
+  background-repeat: no-repeat;
+  background-position: right 0.8rem center;
+  background-size: 1rem;
+}
+
+.register-form .form-group select option {
+  color: #000;     
+  background: #fff;  
+}

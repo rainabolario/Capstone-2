@@ -1,13 +1,14 @@
 import type React from "react"
 import { useState } from "react"
-import { Link } from "react-router-dom"
+import { useNavigate } from "react-router-dom"
 import "../css/login.css"
 
 interface LoginProps {
   onLogin: (email: string) => void
 }
 
-const LoginPage: React.FC<LoginProps> = ({ onLogin }) => {
+const Login: React.FC<LoginProps> = ({ onLogin }) => {
+  const navigate = useNavigate()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
@@ -15,7 +16,6 @@ const LoginPage: React.FC<LoginProps> = ({ onLogin }) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (email && password) {
-      console.log("Login attempt:", { email, password })
       onLogin(email)
     }
   }
@@ -24,13 +24,11 @@ const LoginPage: React.FC<LoginProps> = ({ onLogin }) => {
     <>
       {/* Header Bar */}
       <div className="header-bar">
-          <img 
-            src="/Kc's lola-logo.png" 
-            alt="KC's Kitchen Logo" 
-            className="header-logo"
-          />
-        <span>KC&apos;s Kitchen</span>
-        <Link to="/need-help" className="need-help-link">Need Help?</Link>
+        <img src="/Kc's lola-logo.png" alt="KC's Kitchen Logo" className="header-logo" />
+        <span>{"KC's Kitchen"}</span>
+        <a href="/need-help" className="need-help-link">
+          Need Help?
+        </a>
       </div>
 
       <div className="login-container">
@@ -108,7 +106,15 @@ const LoginPage: React.FC<LoginProps> = ({ onLogin }) => {
             </div>
 
             <div className="forgot-password">
-              <a href="#">Forgot Password?</a>
+              <a
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault()
+                  navigate("/forgot-password")
+                }}
+              >
+                Forgot Password?
+              </a>
             </div>
 
             <button type="submit" className="submit-button">
@@ -121,4 +127,4 @@ const LoginPage: React.FC<LoginProps> = ({ onLogin }) => {
   )
 }
 
-export default LoginPage
+export default Login
