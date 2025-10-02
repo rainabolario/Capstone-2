@@ -43,7 +43,7 @@ const SalesData: React.FC<SalesDataProps> = () => {
         created_at,
         archived,
         customers (
-          name, unit, street, barangay, city, order_mode, payment_mode
+          name, unit, street, barangay, city, order_mode, payment_mode, order_date, order_time
         ),
         order_items (
           name, size, category, qty, price
@@ -58,23 +58,50 @@ const SalesData: React.FC<SalesDataProps> = () => {
 
     // Flatten orders and include archived flag
     const formatted: SalesRecord[] = data.flatMap((order: any) =>
-      order.order_items.map((item: any) => ({
-        id: order.id, // ✅ Use the UUID directly
+    order.order_items.map((item: any) => {
+      const orderDate = order.customers?.order_date
+        ? new Date(order.customers.order_date)
+        : null;
+
+      const formattedDate = orderDate
+        ? orderDate.toLocaleDateString()
+        : "";
+
+      const formattedDay = orderDate
+        ? orderDate.toLocaleDateString("en-US", { weekday: "long" })
+        : "";
+
+      // ✅ Convert "HH:mm:ss" (Postgres TIME) to "hh:mm AM/PM"
+      let formattedTime = "";
+      if (order.customers?.order_time) {
+        const [hours, minutes] = order.customers.order_time.split(":");
+        const date = new Date();
+        date.setHours(parseInt(hours), parseInt(minutes));
+        formattedTime = date.toLocaleTimeString("en-US", {
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: true,
+        });
+      }
+
+      return {
+        id: order.id,
         name: order.customers?.name || "Unknown",
-        time: new Date(order.created_at).toLocaleTimeString(),
-        date: new Date(order.created_at).toLocaleDateString(),
-        day: new Date(order.created_at).toLocaleDateString("en-US", { weekday: "long" }),
+        time: formattedTime,   // 👈 now shows "5:32 PM"
+        date: formattedDate,
+        day: formattedDay,
         item: item.name,
         itemSize: item.size,
         orderType: item.category,
         quantity: item.qty,
         address: `${order.customers?.unit || ""} ${order.customers?.street || ""}, ${order.customers?.barangay || ""}, ${order.customers?.city || ""}`,
-        medium: order.customers?.order_mode || "", // ✅ Shows the actual order_mode
+        medium: order.customers?.order_mode || "",
         mop: order.customers?.payment_mode || "",
         total: item.price * item.qty,
         archived: order.archived || false,
-      }))
-    );
+      };
+    })
+  );
 
     setSalesData(formatted);
   };
@@ -272,9 +299,9 @@ const SalesData: React.FC<SalesDataProps> = () => {
                   />
                 </th>
                 <th>Name</th>
-                <th>Time</th>
-                <th>Date</th>
-                <th>Day</th>
+                <th>Order Time</th>
+                <th>Order Date</th>
+                <th>Order Day</th>
                 <th>Item</th>
                 <th>Item Size</th>
                 <th>Order Type</th>

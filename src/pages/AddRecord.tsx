@@ -79,10 +79,17 @@ export default function AddRecord({ onLogout }: AddRecordProps) {
             street: formData.customer.street,
             barangay: formData.customer.barangay,
             city: formData.customer.city,
-            delivery_date: formData.customer.date?.toISOString().split("T")[0],
-            delivery_time: formData.customer.time
-              ? formData.customer.time.format("HH:mm:ss")
+
+            // ✅ FIX: Use Dayjs local formatting instead of toISOString()
+            order_date: formData.customer.date
+              ? formData.customer.date.format("YYYY-MM-DD")
               : null,
+
+            // ✅ FIX: Store in AM/PM format
+            order_time: formData.customer.time
+              ? formData.customer.time.format("hh:mm A")
+              : null,
+
             order_mode: formData.customer.orderMode,
             payment_mode: formData.customer.paymentMode,
           },
@@ -98,7 +105,7 @@ export default function AddRecord({ onLogout }: AddRecordProps) {
         .insert([
           {
             customer_id: customer.id,
-            total_amount: 0, // safe, schema has numeric
+            total_amount: 0,
           },
         ])
         .select()

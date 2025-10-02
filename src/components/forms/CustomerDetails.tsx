@@ -11,7 +11,7 @@ import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { TimePicker } from "@mui/x-date-pickers/TimePicker";
-import dayjs, { Dayjs } from "dayjs";
+import { Dayjs } from "dayjs";
 import "../../css/CustomerDetails.css";
 
 interface Customer {
@@ -41,6 +41,7 @@ export default function CustomerDetails({ data, onChange }: Props) {
       <Divider />
 
       <div className="customer-details-field">
+        {/* Customer Name */}
         <TextField
           label="Customer Name"
           placeholder="eg. Juan Dela Cruz"
@@ -51,6 +52,7 @@ export default function CustomerDetails({ data, onChange }: Props) {
           onChange={(e) => updateField("name", e.target.value)}
         />
 
+        {/* Address Fields */}
         <div className="customer-address-field">
           <TextField
             label="Unit No."
@@ -90,23 +92,39 @@ export default function CustomerDetails({ data, onChange }: Props) {
           />
         </div>
 
-        <div className="datetime-container">
-          <LocalizationProvider dateAdapter={AdapterDayjs}>
+        {/* Date & Time Pickers side by side */}
+        <LocalizationProvider dateAdapter={AdapterDayjs}>
+          <div className="datetime-row" style={{ display: "flex", gap: "16px" }}>
             <DatePicker
               label="Date of Order"
-              value={data.date || dayjs()}
+              value={data.date}
               onChange={(newDate) => updateField("date", newDate)}
-              slotProps={{ textField: { fullWidth: true } }}
+              slotProps={{
+                textField: {
+                  fullWidth: true,
+                  placeholder: "Select Date",
+                  InputLabelProps: { shrink: true }, // ✅ always shrink
+                },
+              }}
+              sx={{ flex: 1 }}
             />
             <TimePicker
               label="Time of Order"
-              value={data.time || dayjs()}
+              value={data.time}
               onChange={(newTime) => updateField("time", newTime)}
-              slotProps={{ textField: { fullWidth: true } }}
+              slotProps={{
+                textField: {
+                  fullWidth: true,
+                  placeholder: "Select Time",
+                  InputLabelProps: { shrink: true }, // ✅ always shrink
+                },
+              }}
+              sx={{ flex: 1 }}
             />
-          </LocalizationProvider>
-        </div>
+          </div>
+        </LocalizationProvider>
 
+        {/* Order Mode */}
         <FormControl fullWidth>
           <InputLabel id="order-mode-label" shrink>
             Mode of Order
@@ -119,7 +137,11 @@ export default function CustomerDetails({ data, onChange }: Props) {
             }
             displayEmpty
             renderValue={(selected) =>
-              selected ? selected : <span style={{ color: "#9e9e9e" }}>Select order mode</span>
+              selected ? (
+                selected
+              ) : (
+                <span style={{ color: "#9e9e9e" }}>Select order mode</span>
+              )
             }
           >
             <MenuItem value="Instagram">Instagram</MenuItem>
@@ -130,6 +152,7 @@ export default function CustomerDetails({ data, onChange }: Props) {
           </Select>
         </FormControl>
 
+        {/* Payment Mode */}
         <FormControl fullWidth>
           <InputLabel id="payment-mode-label" shrink>
             Mode of Payment
@@ -142,7 +165,11 @@ export default function CustomerDetails({ data, onChange }: Props) {
             }
             displayEmpty
             renderValue={(selected) =>
-              selected ? selected : <span style={{ color: "#9e9e9e" }}>Select payment mode</span>
+              selected ? (
+                selected
+              ) : (
+                <span style={{ color: "#9e9e9e" }}>Select payment mode</span>
+              )
             }
           >
             <MenuItem value="Cash">Cash</MenuItem>

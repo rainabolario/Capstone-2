@@ -44,10 +44,10 @@ const ArchivedData: React.FC = () => {
       .from("orders")
       .select(`
         id,
-        created_at,
+        archived,
         total_amount,
         customers (
-          name, unit, street, barangay, city, payment_mode, order_mode
+          name, unit, street, barangay, city, payment_mode, order_mode, order_date, order_time
         ),
         order_items (
           name, size, category, qty, price
@@ -58,21 +58,52 @@ const ArchivedData: React.FC = () => {
     if (error) {
       console.error("Error fetching archived data:", error);
     } else {
-      const formatted = data.map((order: any) => ({
-        id: order.id,
-        name: order.customers?.name || "",
-        time: new Date(order.created_at).toLocaleTimeString(),
-        date: new Date(order.created_at).toLocaleDateString(),
-        day: new Date(order.created_at).toLocaleDateString("en-US", { weekday: "long" }),
-        item: order.order_items?.map((i: any) => i.name).join(", ") || "",
-        itemSize: order.order_items?.map((i: any) => i.size).join(", ") || "",
-        orderType: order.order_items?.map((i: any) => i.category).join(", ") || "",
-        quantity: order.order_items?.reduce((acc: number, i: any) => acc + (i.qty || 0), 0) || 0,
-        address: `${order.customers?.unit || ""} ${order.customers?.street || ""} ${order.customers?.barangay || ""} ${order.customers?.city || ""}`.trim(),
-        medium: order.customers?.order_mode || "", // ✅ reflect order_mode
-        mop: order.customers?.payment_mode || "",
-        total: order.total_amount || 0,
-      }));
+      const formatted = data.map((order: any) => {
+        // ✅ Format date
+        const orderDate = order.customers?.order_date
+          ? new Date(order.customers.order_date)
+          : null;
+
+        const formattedDate = orderDate
+          ? orderDate.toLocaleDateString()
+          : "";
+
+        const formattedDay = orderDate
+          ? orderDate.toLocaleDateString("en-US", { weekday: "long" })
+          : "";
+
+        // ✅ Format time (from order_time column, Postgres TIME)
+        let formattedTime = "";
+        if (order.customers?.order_time) {
+          const [hours, minutes] = order.customers.order_time.split(":");
+          const d = new Date();
+          d.setHours(parseInt(hours), parseInt(minutes));
+          formattedTime = d.toLocaleTimeString("en-US", {
+            hour: "numeric",
+            minute: "2-digit",
+            hour12: true,
+          });
+        }
+
+        return {
+          id: order.id,
+          name: order.customers?.name || "",
+          time: formattedTime,
+          date: formattedDate,
+          day: formattedDay,
+          item: order.order_items?.map((i: any) => i.name).join(", ") || "",
+          itemSize: order.order_items?.map((i: any) => i.size).join(", ") || "",
+          orderType: order.order_items?.map((i: any) => i.category).join(", ") || "",
+          quantity: order.order_items?.reduce(
+            (acc: number, i: any) => acc + (i.qty || 0),
+            0
+          ) || 0,
+          address: `${order.customers?.unit || ""} ${order.customers?.street || ""}, ${order.customers?.barangay || ""}, ${order.customers?.city || ""}`.trim(),
+          medium: order.customers?.order_mode || "",
+          mop: order.customers?.payment_mode || "",
+          total: order.total_amount || 0,
+        };
+      });
       setSalesData(formatted);
     }
 
@@ -238,7 +269,7 @@ const ArchivedData: React.FC = () => {
                       <td>{record.address}</td>
                       <td>{record.medium}</td>
                       <td>{record.mop}</td>
-                      <td>{record.total}</td>
+                      <td>₱ {record.total.toFixed(2)}</td>
                     </tr>
                   ))
                 ) : (
