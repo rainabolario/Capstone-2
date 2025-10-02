@@ -166,3 +166,16 @@
   font-weight: 600;
   cursor: pointer;
 }
+
+.back-to-login-link {
+  color: white;
+  font-size: 0.875rem;
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color 0.3s;
+}
+
+.back-to-login-link:hover {
+  color: black;
+}
