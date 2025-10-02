@@ -1,234 +1,204 @@
 import React, { useState, useEffect } from "react";
 import Sidebar from "../components/Sidebar";
 import "../css/UserManage.css";
-import { Checkbox, Button } from "@mui/material";
+import { Checkbox, Button, Divider, Typography } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import { User2Icon } from "lucide-react";
 import Register from "./Register";
 import EditUserModal from "./EditAccount";
-import { Divider, Typography } from "@mui/material";
+import { supabase } from "../supabaseClient";
 
 interface User {
-    id: number;
-    name: string;
-    email: string;
-    role: 'Admin' | 'Staff';
-    password?: string; 
-    }
+  id: string;           
+  name: string;
+  email: string;
+  role: "Admin" | "Staff" | string;
+}
 
-    const UserManagement: React.FC = () => {
-    const [openRegister, setOpenRegister] = useState(false);
-    const [users, setUsers] = useState<User[]>([]);
-    const [searchTerm, setSearchTerm] = useState("");
-    const [selectedUsers, setSelectedUsers] = useState<Set<number>>(new Set());
-    const [openEditModal, setOpenEditModal] = useState(false);
-    const [userToEdit, setUserToEdit] = useState<User | null>(null);
 
-    useEffect(() => {
-        const initialUsers: User[] = [
-        { id: 1, name: "John Doe", email: "john.doe@example.com", role: "Admin" },
-        { id: 2, name: "Jane Smith", email: "jane.smith@example.com", role: "Staff" },
-        { id: 3, name: "Peter Jones", email: "peter.jones@example.com", role: "Staff" },
-        ];
-        setUsers(initialUsers);
-    }, []);
+const UserManagement: React.FC = () => {
+  const [users, setUsers] = useState<User[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
+  const [openRegister, setOpenRegister] = useState(false);
+  const [openEditModal, setOpenEditModal] = useState(false);
+  const [userToEdit, setUserToEdit] = useState<User | null>(null);
 
-    const filteredUsers = users.filter(user =>
-        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+  // Fetch users from Supabase
+  const fetchUsers = async () => {
+    const { data, error } = await supabase.from("users").select("*").order("name", { ascending: true });
+    if (error) console.error("Error fetching users:", error);
+    else setUsers(data as User[]);
+  };
 
-    const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setSearchTerm(e.target.value);
-    };
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
-    const handleSelectUser = (userId: number) => {
-        setSelectedUsers(prev => {
-        const newSelected = new Set(prev);
-        if (newSelected.has(userId)) {
-            newSelected.delete(userId);
-        } else {
-            newSelected.add(userId);
-        }
-        return newSelected;
-        });
-    };
+  const filteredUsers = users.filter(
+    (u) => u.name.toLowerCase().includes(searchTerm.toLowerCase()) || u.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-    const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
-        if (event.target.checked) {
-        const allUserIds = new Set(filteredUsers.map(u => u.id));
-        setSelectedUsers(allUserIds);
-        } else {
-        setSelectedUsers(new Set());
-        }
-    };
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value);
 
-    const handleOpenEditModal = () => {
-    // Get the ID of the single selected user
+  const handleSelectUser = (id: string) => {
+    setSelectedUsers((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) newSet.delete(id);
+      else newSet.add(id);
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.checked) setSelectedUsers(new Set(filteredUsers.map((u) => u.id)));
+    else setSelectedUsers(new Set());
+  };
+
+  const handleOpenEditModal = () => {
     const selectedId = selectedUsers.values().next().value;
-    const user = users.find(u => u.id === selectedId);
-        if (user) {
-        setUserToEdit(user);
-        setOpenEditModal(true);
-        }
-    };
+    const user = users.find((u) => u.id === selectedId);
+    if (user) {
+      setUserToEdit(user);
+      setOpenEditModal(true);
+    }
+  };
 
-    const handleUpdateUser = (updatedUser: User) => {
-    setUsers(prevUsers =>
-        prevUsers.map(user => (user.id === updatedUser.id ? updatedUser : user))
-        );
+  const handleUpdateUser = (updatedUser: User) => {
+    setUsers((prev) => prev.map((u) => (u.id === updatedUser.id ? updatedUser : u)));
     setOpenEditModal(false);
     setUserToEdit(null);
-    setSelectedUsers(new Set()); // Clear selection after editing
-    };
+    setSelectedUsers(new Set());
+  };
 
-    const numSelected = selectedUsers.size;
-    const rowCount = filteredUsers.length;
+  return (
+    <div className="user-management-container">
+      <Sidebar />
+      <div className="user-management-content">
+        <h2>USER MANAGEMENT</h2>
+        <Typography variant="caption" sx={{ color: "gray", fontSize: 14, mb: 1, mt: 1 }}>
+          Manage all user profiles here. You can add, edit, or delete users as needed.
+        </Typography>
+        <Divider />
 
-    
-    return (
-        <div className="user-management-container">
-        <Sidebar />
-        <div className="user-management-content">
-            <h2>USER MANAGEMENT</h2>
-            <Typography variant="caption" sx={{ color: 'gray', fontSize: '14px', mb:1, mt: 1 }}>
-                Manage all user accounts here. You can add, edit, or delete user profiles as needed.
-            </Typography>
-            <Divider />
+        <div className="action-container">
+          <div className="search-container">
+            <input
+              type="text"
+              placeholder="Search…"
+              value={searchTerm}
+              onChange={handleSearch}
+              className="search-input"
+            />
+            <SearchIcon className="search-icon" />
+          </div>
+          <div className="buttons-container">
+            <Button
+              variant="outlined"
+              sx={{
+                color: "black",
+                border: "none",
+                "&:hover": { backgroundColor: "#EC7A1C", color: "white" },
+                padding: "8px 25px",
+              }}
+              startIcon={<User2Icon />}
+              onClick={() => setOpenRegister(true)}
+            >
+              Add User
+            </Button>
 
-            <div className="action-container">
-                <div className="search-container">
-                    <input
-                        type="text"
-                        placeholder="Search…"
-                        value={searchTerm}
-                        onChange={handleSearch}
-                        className="search-input"
-                    />
-                    <SearchIcon className="search-icon" />
-                </div>
-                <div className="buttons-container">
-                    <Button 
-                        variant="outlined" 
-                        sx={{ 
-                            color: 'black',
-                            border: 'none',
-                            '&:hover': {
-                                backgroundColor: '#EC7A1C',
-                                color: 'white',
-                            },
-                            padding: '8px 25px',
-                        }}
-                        startIcon={<User2Icon />}
-                            onClick={() => setOpenRegister(true)}    
-                    >
-                        Add User
-                    </Button>
-                    <Button
-                        variant="outlined"
-                        sx={{ 
-                            color: 'black',
-                            border: 'none',
-                            '&:hover': {
-                                backgroundColor: '#EC7A1C',
-                                color: 'white',
-                            },
-                            '&.Mui-disabled': {
-                                border: 'none', 
-                            },
-                            padding: '8px 25px',
-                        }}
-                        disabled={numSelected === 0}
-                        startIcon={<EditIcon />}
-                        onClick={handleOpenEditModal}
-                    >
-                        Edit User
-                    </Button>
-                    <Button 
-                        variant="outlined" 
-                        sx={{ 
-                            color: 'black',
-                            border: 'none',
-                            '&:hover': {
-                                backgroundColor: '#EC7A1C',
-                                color: 'white',
-                            },
-                            '&.Mui-disabled': {
-                                border: 'none', 
-                            },
-                            padding: '8px 25px',
-                        }}
-                        disabled={numSelected === 0}
-                        startIcon={<DeleteIcon />}
-                    >
-                        Delete User
-                    </Button>
-                </div>
-            </div>
+            <Button
+              variant="outlined"
+              sx={{
+                color: "black",
+                border: "none",
+                "&:hover": { backgroundColor: "#EC7A1C", color: "white" },
+                "&.Mui-disabled": { border: "none" },
+                padding: "8px 25px",
+              }}
+              disabled={selectedUsers.size === 0}
+              startIcon={<EditIcon />}
+              onClick={handleOpenEditModal}
+            >
+              Edit User
+            </Button>
 
-            <div className="users-table-container">
-            <table className="users-table">
-                <thead>
-                <tr>
-                    <th>
-                    <Checkbox
-                        color="primary"
-                        indeterminate={numSelected > 0 && numSelected < rowCount}
-                        checked={rowCount > 0 && numSelected === rowCount}
-                        onChange={handleSelectAll}
-                    />
-                    </th>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Role</th>
-                    <th>Password</th>
-                </tr>
-                </thead>
-                <tbody>
-                {filteredUsers.map((user) => (
-                    <tr key={user.id}>
-                    <td>
-                        <Checkbox
-                        color="primary"
-                        checked={selectedUsers.has(user.id)}
-                        onChange={() => handleSelectUser(user.id)}
-                        />
-                    </td>
-                    <td>{user.name}</td>
-                    <td>{user.email}</td>
-                    <td>{user.role}</td>
-                    <td>********</td>
-                    </tr>
-                ))}
-                </tbody>
-            </table>
-            </div>
+            <Button
+              variant="outlined"
+              sx={{
+                color: "black",
+                border: "none",
+                "&:hover": { backgroundColor: "#EC7A1C", color: "white" },
+                "&.Mui-disabled": { border: "none" },
+                padding: "8px 25px",
+              }}
+              disabled={selectedUsers.size === 0}
+              startIcon={<DeleteIcon />}
+            >
+              Delete User
+            </Button>
+          </div>
         </div>
-        
-        {openRegister && (
+
+        <div className="users-table-container">
+          <table className="users-table">
+            <thead>
+              <tr>
+                <th>
+                  <Checkbox
+                    color="primary"
+                    indeterminate={selectedUsers.size > 0 && selectedUsers.size < filteredUsers.length}
+                    checked={filteredUsers.length > 0 && selectedUsers.size === filteredUsers.length}
+                    onChange={handleSelectAll}
+                  />
+                </th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Role</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredUsers.map((u) => (
+                <tr key={u.id}>
+                  <td>
+                    <Checkbox
+                      color="primary"
+                      checked={selectedUsers.has(u.id)}
+                      onChange={() => handleSelectUser(u.id)}
+                    />
+                  </td>
+                  <td>{u.name}</td>
+                  <td>{u.email}</td>
+                  <td>{u.role}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {openRegister && (
         <Register
-            onClose={() => setOpenRegister(false)}
-            onSubmit={(newUser) => {
-            setUsers((prev) => [
+          onClose={() => setOpenRegister(false)}
+          onSubmit={(newUser) => { setUsers((prev) => [
                 ...prev,
-                { id: prev.length + 1, ...newUser, role: newUser.role as 'Admin' | 'Staff' },
+                { ...newUser, role: newUser.role as "Admin" | "Staff" } 
             ]);
-            setOpenRegister(false);
             }}
         />
-        )}
+      )}
 
-        {openEditModal && userToEdit && (
+      {openEditModal && userToEdit && (
         <EditUserModal
-            user={userToEdit}
-            onClose={() => setOpenEditModal(false)}
-            onSubmit={handleUpdateUser}
+          user={userToEdit}
+          onClose={() => setOpenEditModal(false)}
+          onSubmit={handleUpdateUser}
         />
-        )}
+      )}
     </div>
-    );
+  );
 };
 
 export default UserManagement;

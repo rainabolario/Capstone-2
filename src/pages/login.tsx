@@ -1,24 +1,66 @@
-import type React from "react"
-import { useState } from "react"
-import { useNavigate } from "react-router-dom"
-import "../css/login.css"
+import type React from "react";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import "../css/login.css";
+import { supabase } from "../supabaseClient";
 
 interface LoginProps {
-  onLogin: (email: string) => void
+  onLogin: (email: string) => void;
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
-  const navigate = useNavigate()
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
+  const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (email && password) {
-      onLogin(email)
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    if (!email || !password) return;
+
+    setLoading(true);
+
+    try {
+      // Sign in with Supabase
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (signInError) {
+        // If user exists in database but not confirmed, still allow login
+        if (signInError.message.includes("Email not confirmed")) {
+          // Fetch user from users table
+          const { data: userData, error: userError } = await supabase
+            .from("users")
+            .select("*")
+            .eq("email", email)
+            .single();
+
+          if (userError || !userData) {
+            setError("User not found in database");
+          } else {
+            onLogin(userData.email); // TypeScript-safe
+          }
+        } else {
+          setError(signInError.message);
+        }
+      } else if (data.user && data.user.email) {
+        // Successful login
+        onLogin(data.user.email);
+      } else {
+        setError("Unknown error occurred");
+      }
+    } catch (err: any) {
+      setError(err.message);
     }
-  }
+
+    setLoading(false);
+  };
 
   return (
     <>
@@ -40,7 +82,9 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         {/* Login Form Section */}
         <div className="login-form-box">
           <h2 className="login-title">LOGIN</h2>
-          <p className="login-subtitle">Enter your email and password below to login to your account</p>
+          <p className="login-subtitle">
+            Enter your email and password below to login to your account
+          </p>
 
           <form onSubmit={handleSubmit}>
             <div className="form-group">
@@ -105,12 +149,14 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               </div>
             </div>
 
+            {error && <p className="login-error">{error}</p>}
+
             <div className="forgot-password">
               <a
                 href="#"
                 onClick={(e) => {
-                  e.preventDefault()
-                  navigate("/forgot-password")
+                  e.preventDefault();
+                  navigate("/forgot-password");
                 }}
               >
                 Forgot Password?
@@ -118,13 +164,13 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             </div>
 
             <button type="submit" className="submit-button">
-              Log In
+              {loading ? "Logging in..." : "Log In"}
             </button>
           </form>
         </div>
       </div>
     </>
-  )
-}
+  );
+};
 
-export default Login
+export default Login;
