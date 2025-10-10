@@ -7,3 +7,4 @@ npm install @mui/x-date-pickers
 
 BACKEND
 npm install @supabase/supabase-js 
+npm install bcryptjs

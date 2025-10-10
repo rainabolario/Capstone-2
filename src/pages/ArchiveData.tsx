@@ -31,7 +31,7 @@ const ArchivedData: React.FC = () => {
   const [salesData, setSalesData] = useState<SalesRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-
+  const userRole = localStorage.getItem("userRole");
   // ✅ Fetch archived records from Supabase
   useEffect(() => {
     fetchArchived();
@@ -190,23 +190,23 @@ const ArchivedData: React.FC = () => {
             variant="outlined"
             onClick={handleRestore}
             startIcon={<RestoreIcon />}
-            sx={{ 
-              color: 'black',
-              border: 'none',
-              padding: '8px 25px',
-                '&:hover': { 
-                  backgroundColor: '#ff8c42', 
-                  color: 'white',
-                },
-                '&.Mui-disabled': {
-                  border: 'none', 
-                }
-              }} 
-            disabled={selectedIds.length === 0}
+            sx={{
+              color: "black",
+              border: "none",
+              padding: "8px 25px",
+              "&:hover": {
+                backgroundColor: "#ff8c42",
+                color: "white",
+              },
+              "&.Mui-disabled": {
+                border: "none",
+              },
+            }}
+            disabled={userRole !== "Admin" || selectedIds.length === 0} 
           >
             Restore Selected
           </Button>
-        </div>
+          </div>
 
         {/* Data Table */}
         <div className="archived-table-container">

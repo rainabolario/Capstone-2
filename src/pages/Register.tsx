@@ -1,5 +1,4 @@
-import type React from "react";
-import { useState } from "react";
+import React, { useState } from "react";
 import "../css/Register.css";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import {
@@ -12,13 +11,13 @@ import {
   Button
 } from "@mui/material";
 import { supabase } from "../supabaseClient";
+import bcrypt from "bcryptjs";
 
 interface RegisterProps {
   onClose: () => void;
-  onSubmit: (user: { id: string; name: string; email: string; role: string }) => void;
 }
 
-const Register: React.FC<RegisterProps> = ({ onClose, onSubmit }) => {
+const Register: React.FC<RegisterProps> = ({ onClose }) => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("Staff");
@@ -27,8 +26,8 @@ const Register: React.FC<RegisterProps> = ({ onClose, onSubmit }) => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Password validation 
-  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_])[A-Za-z\d\W_]{6,15}$/;
+  const passwordRegex =
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_])[A-Za-z\d\W_]{6,15}$/;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,37 +42,49 @@ const Register: React.FC<RegisterProps> = ({ onClose, onSubmit }) => {
 
     setLoading(true);
 
-    // Sign up user in Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-    });
+    try {
+      // 1️⃣ Create user in Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+      });
 
-    if (authError) {
-      setError(authError.message);
-      setLoading(false);
-      return;
-    }
-
-    if (authData.user) {
-      // Insert into users table for extra info
-      const { data: userData, error: userError } = await supabase
-        .from("users") // Make sure this table exists
-        .insert([
-          { id: authData.user.id, name, email, role }
-        ])
-        .select()
-        .single();
-
-      setLoading(false);
-
-      if (userError) {
-        setError(userError.message);
-      } else if (userData) {
-        onSubmit(userData);
-        onClose();
+      if (authError) {
+        setError(authError.message);
+        setLoading(false);
+        return;
       }
+
+      if (authData.user) {
+        const userId = authData.user.id;
+
+        // 2️⃣ Hash the password
+        const hashedPassword = bcrypt.hashSync(password, 10);
+
+        // 3️⃣ Insert into your users table
+        const { error: userError } = await supabase.from("users").insert([
+          {
+            id: userId,
+            name,
+            email,
+            role,
+            password: hashedPassword, // store hashed password
+          },
+        ]);
+
+        if (userError) {
+          setError(userError.message);
+        } else {
+          alert("✅ User registered! Please confirm your email before logging in.");
+          onClose();
+        }
+      }
+    } catch (err: any) {
+      console.error("Register error:", err);
+      setError("Something went wrong. Please try again.");
     }
+
+    setLoading(false);
   };
 
   return (
@@ -99,7 +110,6 @@ const Register: React.FC<RegisterProps> = ({ onClose, onSubmit }) => {
             fullWidth
             InputLabelProps={{ shrink: true }}
           />
-
           <TextField
             label="Email"
             variant="outlined"
@@ -110,7 +120,6 @@ const Register: React.FC<RegisterProps> = ({ onClose, onSubmit }) => {
             fullWidth
             InputLabelProps={{ shrink: true }}
           />
-
           <TextField
             label="Role"
             variant="outlined"
@@ -124,7 +133,6 @@ const Register: React.FC<RegisterProps> = ({ onClose, onSubmit }) => {
             <MenuItem value="Staff">Staff</MenuItem>
             <MenuItem value="Admin">Admin</MenuItem>
           </TextField>
-
           <TextField
             label="Password"
             variant="outlined"
@@ -150,37 +158,11 @@ const Register: React.FC<RegisterProps> = ({ onClose, onSubmit }) => {
               ),
             }}
           />
-
           {error && <Typography color="error" variant="body2" sx={{ mt: 1 }}>{error}</Typography>}
 
           <div className="button-group">
-            <Button
-              variant="outlined"
-              onClick={onClose}
-              sx={{
-                color: "gray",
-                padding: "5px 25px",
-                borderColor: "gray",
-                "&.MuiButton-outlined:hover": {
-                  backgroundColor: "#ec7a1c",
-                  borderColor: "#ec7a1c",
-                  color: "white",
-                },
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="contained"
-              type="submit"
-              disabled={loading}
-              sx={{
-                color: "white",
-                borderColor: "gray",
-                backgroundColor: "#ec7a1c",
-                padding: "5px 35px",
-              }}
-            >
+            <Button variant="outlined" onClick={onClose} sx={{ color: "gray", padding: "5px 25px", borderColor: "gray", "&.MuiButton-outlined:hover": { backgroundColor: "#ec7a1c", borderColor: "#ec7a1c", color: "white" }}}>Cancel</Button>
+            <Button variant="contained" type="submit" disabled={loading} sx={{ color: "white", borderColor: "gray", backgroundColor: "#ec7a1c", padding: "5px 35px" }}>
               {loading ? "Adding..." : "Add User"}
             </Button>
           </div>

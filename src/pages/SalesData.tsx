@@ -33,6 +33,7 @@ const SalesData: React.FC<SalesDataProps> = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [salesData, setSalesData] = useState<SalesRecord[]>([]);
   const [selectedRecords, setSelectedRecords] = useState<Set<string>>(new Set());
+  const userRole = localStorage.getItem("userRole"); 
 
   // 🔹 Fetch data from Supabase
   const fetchData = async () => {
@@ -56,60 +57,51 @@ const SalesData: React.FC<SalesDataProps> = () => {
       return;
     }
 
-    // Flatten orders and include archived flag
     const formatted: SalesRecord[] = data.flatMap((order: any) =>
-    order.order_items.map((item: any) => {
-      const orderDate = order.customers?.order_date
-        ? new Date(order.customers.order_date)
-        : null;
+      order.order_items.map((item: any) => {
+        const orderDate = order.customers?.order_date
+          ? new Date(order.customers.order_date)
+          : null;
 
-      const formattedDate = orderDate
-        ? orderDate.toLocaleDateString()
-        : "";
+        const formattedDate = orderDate ? orderDate.toLocaleDateString() : "";
+        const formattedDay = orderDate ? orderDate.toLocaleDateString("en-US", { weekday: "long" }) : "";
 
-      const formattedDay = orderDate
-        ? orderDate.toLocaleDateString("en-US", { weekday: "long" })
-        : "";
+        let formattedTime = "";
+        if (order.customers?.order_time) {
+          const [hours, minutes] = order.customers.order_time.split(":");
+          const date = new Date();
+          date.setHours(parseInt(hours), parseInt(minutes));
+          formattedTime = date.toLocaleTimeString("en-US", {
+            hour: "numeric",
+            minute: "2-digit",
+            hour12: true,
+          });
+        }
 
-      // ✅ Convert "HH:mm:ss" (Postgres TIME) to "hh:mm AM/PM"
-      let formattedTime = "";
-      if (order.customers?.order_time) {
-        const [hours, minutes] = order.customers.order_time.split(":");
-        const date = new Date();
-        date.setHours(parseInt(hours), parseInt(minutes));
-        formattedTime = date.toLocaleTimeString("en-US", {
-          hour: "numeric",
-          minute: "2-digit",
-          hour12: true,
-        });
-      }
-
-      return {
-        id: order.id,
-        name: order.customers?.name || "Unknown",
-        time: formattedTime,   // 👈 now shows "5:32 PM"
-        date: formattedDate,
-        day: formattedDay,
-        item: item.name,
-        itemSize: item.size,
-        orderType: item.category,
-        quantity: item.qty,
-        address: `${order.customers?.unit || ""} ${order.customers?.street || ""}, ${order.customers?.barangay || ""}, ${order.customers?.city || ""}`,
-        medium: order.customers?.order_mode || "",
-        mop: order.customers?.payment_mode || "",
-        total: item.price * item.qty,
-        archived: order.archived || false,
-      };
-    })
-  );
+        return {
+          id: order.id,
+          name: order.customers?.name || "Unknown",
+          time: formattedTime,
+          date: formattedDate,
+          day: formattedDay,
+          item: item.name,
+          itemSize: item.size,
+          orderType: item.category,
+          quantity: item.qty,
+          address: `${order.customers?.unit || ""} ${order.customers?.street || ""}, ${order.customers?.barangay || ""}, ${order.customers?.city || ""}`,
+          medium: order.customers?.order_mode || "",
+          mop: order.customers?.payment_mode || "",
+          total: item.price * item.qty,
+          archived: order.archived || false,
+        };
+      })
+    );
 
     setSalesData(formatted);
   };
 
   useEffect(() => {
     fetchData();
-
-    // 🔹 Real-time subscription (INSERT & UPDATE)
     const channel = supabase
       .channel("orders-realtime")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "orders" }, fetchData)
@@ -121,23 +113,24 @@ const SalesData: React.FC<SalesDataProps> = () => {
     };
   }, []);
 
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value);
-  };
-
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value);
   const handleAddRecord = () => {
+    if (userRole !== "Admin") return; // 🚫 Staff can't add
     navigate("/addrecord");
   };
 
-  // 🔹 Archive selected records
   const handleArchiveRecord = async () => {
+    if (userRole !== "Admin") {
+      alert("Only Admins can archive records.");
+      return;
+    }
+
     if (selectedRecords.size === 0) {
       alert("Please select at least one record to archive.");
       return;
     }
 
-    const idsToArchive = Array.from(selectedRecords); // ✅ Send UUIDs directly
-
+    const idsToArchive = Array.from(selectedRecords);
     const { error } = await supabase
       .from("orders")
       .update({ archived: true })
@@ -154,33 +147,29 @@ const SalesData: React.FC<SalesDataProps> = () => {
   };
 
   const handleEditRecord = () => {
-    if(selectedRecords.size === 1) {
-      const editId = selectedRecords.values().next().value;
-      const recordToEdit = salesData.find(record => record.id === editId);
-      navigate(`/editrecord/${editId}`);
+    if (userRole !== "Admin") {
+      alert("Only Admins can edit records.");
+      return;
+    }
 
-      if(recordToEdit){
-        navigate(`/editrecord/${editId}`, { state: { record: recordToEdit } });
-      }
+    if (selectedRecords.size === 1) {
+      const editId = selectedRecords.values().next().value;
+      const recordToEdit = salesData.find((record) => record.id === editId);
+      if (recordToEdit) navigate(`/editrecord/${editId}`, { state: { record: recordToEdit } });
     } else {
       alert("Please select exactly one record to edit.");
     }
   };
 
-  // 🔹 Toggle selection by UUID only
   const toggleRecordSelection = (id: string) => {
     setSelectedRecords((prev) => {
       const updated = new Set(prev);
-      if (updated.has(id)) {
-        updated.delete(id);
-      } else {
-        updated.add(id);
-      }
+      if (updated.has(id)) updated.delete(id);
+      else updated.add(id);
       return updated;
     });
   };
 
-  // 🔹 Filtered rows (exclude archived & search)
   const filteredData = salesData
     .filter((record) => !record.archived)
     .filter((record) =>
@@ -188,18 +177,18 @@ const SalesData: React.FC<SalesDataProps> = () => {
         String(val).toLowerCase().includes(searchTerm.toLowerCase())
       )
     );
-  
+
   const numSelected = selectedRecords.size;
   const rowCount = filteredData.length;
-  
+
   const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.checked) {
-      const newSelected = new Set(filteredData.map(r => r.id));
+      const newSelected = new Set(filteredData.map((r) => r.id));
       setSelectedRecords(newSelected);
       return;
     }
     setSelectedRecords(new Set());
-  }
+  };
 
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
@@ -210,10 +199,10 @@ const SalesData: React.FC<SalesDataProps> = () => {
             <h1 className="page-title">SALES DATA</h1>
           </div>
         </div>
-        <Typography variant="caption" sx={{ color: 'gray', fontSize: '14px', mb:1, mt: 1 }}>
-                This contains a detailed list of all transactions. You can add, edit, or archive records as needed.
-          </Typography>
-          <Divider />
+        <Typography variant="caption" sx={{ color: "gray", fontSize: "14px", mb: 1, mt: 1 }}>
+          This contains a detailed list of all transactions. {userRole === "Admin" && "You can add, edit, or archive records as needed."}
+        </Typography>
+        <Divider />
 
         <div className="action-bar">
           <div className="search-container">
@@ -226,78 +215,77 @@ const SalesData: React.FC<SalesDataProps> = () => {
             />
           </div>
 
-          <div className="action-buttons">
-            <Button
-              variant="outlined"
-              sx={{ 
-                  color: 'black',
-                  border: 'none',
-                  '&:hover': {
-                      backgroundColor: '#EC7A1C',
-                      color: 'white',
+          {/* Only Admin sees these buttons */}
+          {userRole === "Admin" && (
+            <div className="action-buttons">
+              <Button
+                variant="outlined"
+                sx={{
+                  color: "black",
+                  border: "none",
+                  "&:hover": {
+                    backgroundColor: "#EC7A1C",
+                    color: "white",
                   },
-                  padding: '8px 25px',
-              }}
-              onClick={handleAddRecord}
-              startIcon={<AddOutlined style={{ fontSize: 20 }} />}
-            >
-              Add Record
-            </Button>
-            <Button
-              variant="outlined"
-              sx={{ 
-                  color: 'black',
-                  border: 'none',
-                  '&:hover': {
-                      backgroundColor: '#EC7A1C',
-                      color: 'white',
+                  padding: "8px 25px",
+                }}
+                onClick={handleAddRecord}
+                startIcon={<AddOutlined style={{ fontSize: 20 }} />}
+              >
+                Add Record
+              </Button>
+              <Button
+                variant="outlined"
+                sx={{
+                  color: "black",
+                  border: "none",
+                  "&:hover": {
+                    backgroundColor: "#EC7A1C",
+                    color: "white",
                   },
-                  '&.Mui-disabled': {
-                      border: 'none', 
+                  padding: "8px 25px",
+                }}
+                onClick={handleArchiveRecord}
+                startIcon={<Inventory2Outlined style={{ fontSize: 20 }} />}
+                disabled={selectedRecords.size === 0}
+              >
+                Archive Record
+              </Button>
+              <Button
+                variant="outlined"
+                sx={{
+                  color: "black",
+                  border: "none",
+                  "&:hover": {
+                    backgroundColor: "#EC7A1C",
+                    color: "white",
                   },
-                  padding: '8px 25px',
-              }}
-              onClick={handleArchiveRecord}
-              startIcon={<Inventory2Outlined style={{ fontSize: 20 }} />}
-              disabled={selectedRecords.size === 0}
-            >
-              Archive Record
-            </Button>
-            <Button
-              variant="outlined"
-              sx={{ 
-                  color: 'black',
-                  border: 'none',
-                  '&:hover': {
-                      backgroundColor: '#EC7A1C',
-                      color: 'white',
-                  },
-                  '&.Mui-disabled': {
-                      border: 'none', 
-                  },
-                  padding: '8px 25px',
-              }}
-              onClick={handleEditRecord}
-              startIcon={<EditOutlined style={{ fontSize: 20 }} />}
-              disabled={selectedRecords.size !== 1}
-            >
-              Edit Record
-            </Button>
-          </div>
+                  padding: "8px 25px",
+                }}
+                onClick={handleEditRecord}
+                startIcon={<EditOutlined style={{ fontSize: 20 }} />}
+                disabled={selectedRecords.size !== 1}
+              >
+                Edit Record
+              </Button>
+            </div>
+          )}
         </div>
 
         <div className="table-container">
           <table className="sales-table">
             <thead>
               <tr>
-                <th>
-                  <Checkbox
-                    color="primary"
-                    indeterminate={numSelected > 0 && numSelected < rowCount}
-                    checked={rowCount > 0 && numSelected === rowCount}
-                    onChange={handleSelectAll}
-                  />
-                </th>
+                {userRole === "Admin" && (
+                  <th>
+                    <Checkbox
+                      color="primary"
+                      indeterminate={numSelected > 0 && numSelected < rowCount}
+                      checked={rowCount > 0 && numSelected === rowCount}
+                      onChange={handleSelectAll}
+                    />
+                  </th>
+                )}
                 <th>Name</th>
                 <th>Order Time</th>
                 <th>Order Date</th>
@@ -316,18 +304,20 @@ const SalesData: React.FC<SalesDataProps> = () => {
               {filteredData.length > 0 ? (
                 filteredData.map((record) => (
                   <tr key={record.id}>
-                    <td>
-                      <Checkbox
-                        sx={{ 
-                          color: "#9ca3af",
-                          '&.Mui-checked': { 
-                            color: "#EC7A1C" 
-                          }
-                        }}
-                        checked={selectedRecords.has(record.id)}
-                        onChange={() => toggleRecordSelection(record.id)}
-                      />
-                    </td>
+                    {userRole === "Admin" && (
+                      <td>
+                        <Checkbox
+                          sx={{
+                            color: "#9ca3af",
+                            "&.Mui-checked": {
+                              color: "#EC7A1C",
+                            },
+                          }}
+                          checked={selectedRecords.has(record.id)}
+                          onChange={() => toggleRecordSelection(record.id)}
+                        />
+                      </td>
+                    )}
                     <td>{record.name}</td>
                     <td>{record.time}</td>
                     <td>{record.date}</td>

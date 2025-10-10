@@ -1,182 +1,184 @@
-import { useState } from "react"
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom"
-import Login from "./pages/login"
-import SalesOverview from "./pages/SalesOverview"
-import SalesForecast from "./pages/SalesForecast"
-import CustomerBehavior from "./pages/CustomerBehavior"
-import MarketBasket from "./pages/MarketBasket"
-import WhatIfAnalysis from "./pages/WhatIfAnalysis"
-import SalesData from "./pages/SalesData"
-import AddRecord from "./pages/AddRecord"
-import EditRecord from "./pages/EditRecord"
-import ArchiveData from "./pages/ArchiveData"
-import UserManagement from "./pages/UserManage"
-import Account from "./pages/Account"
-import Help from "./pages/Help"
-import NeedHelp from "./pages/NeedHelp"
+import { useState } from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import Login from "./pages/Login";
+import SalesOverview from "./pages/SalesOverview";
+import SalesForecast from "./pages/SalesForecast";
+import CustomerBehavior from "./pages/CustomerBehavior";
+import MarketBasket from "./pages/MarketBasket";
+import WhatIfAnalysis from "./pages/WhatIfAnalysis";
+import SalesData from "./pages/SalesData";
+import AddRecord from "./pages/AddRecord";
+import EditRecord from "./pages/EditRecord";
+import ArchiveData from "./pages/ArchiveData";
+import UserManagement from "./pages/UserManage";
+import Account from "./pages/Account";
+import Help from "./pages/Help";
+import NeedHelp from "./pages/NeedHelp";
 import ForgotPassword from "./pages/ForgotPassword";
 import UpdatePassword from "./pages/UpdatePassword";
 
+// Protected route component
+const ProtectedRoute = ({ allowedRoles, children }: any) => {
+  const isAuthenticated = localStorage.getItem("auth") === "true";
+  const userRole = localStorage.getItem("userRole");
+
+  // Not logged in → redirect to login
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Unauthorized role → redirect to login
+  if (!userRole || (allowedRoles && !allowedRoles.includes(userRole))) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return children;
+};
+
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return localStorage.getItem("auth") === "true"
-  })
+  const [currentUser, setCurrentUser] = useState(() => localStorage.getItem("user") || "");
 
-  const [currentUser, setCurrentUser] = useState(() => {
-    return localStorage.getItem("user") || ""
-  })
+  // Login function
+  const handleLogin = (email: string, role: string) => {
+    localStorage.setItem("auth", "true");
+    localStorage.setItem("user", email);
+    localStorage.setItem("userRole", role);
+    setCurrentUser(email);
+    window.location.href = "/salesoverview"; // Redirect after login
+  };
 
-  const handleLogin = (email: string) => {
-    setIsAuthenticated(true)
-    setCurrentUser(email)
-    localStorage.setItem("auth", "true")
-    localStorage.setItem("user", email)
-  }
-
+  // Logout function
   const handleLogout = () => {
-    setIsAuthenticated(false)
-    setCurrentUser("")
-    localStorage.removeItem("auth")
-    localStorage.removeItem("user")
-  }
+    localStorage.removeItem("auth");
+    localStorage.removeItem("user");
+    localStorage.removeItem("userRole");
+    setCurrentUser("");
+    window.location.href = "/login"; // Force redirect to login
+  };
 
   return (
     <Router>
       <Routes>
-        <Route
-          path="/login"
-          element={isAuthenticated ? <Navigate to="/salesoverview" replace /> : <Login onLogin={handleLogin} />}
-        />
+        {/* --- Public Routes --- */}
+        <Route path="/login" element={<Login onLogin={handleLogin} />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/need-help" element={<NeedHelp />} />
-        
+        <Route path="/update-password" element={<UpdatePassword />} />
+
+        {/* Root route */}
         <Route
-          path="/salesoverview"
+          path="/"
           element={
-            isAuthenticated ? (
-              <SalesOverview currentUser={currentUser} onLogout={handleLogout} />
+            localStorage.getItem("auth") === "true" ? (
+              <Navigate to="/salesoverview" replace />
             ) : (
               <Navigate to="/login" replace />
             )
           }
         />
+
+        {/* --- Shared Access (Admin + Staff) --- */}
         <Route
-          path="/salesforecast"
+          path="/salesoverview"
           element={
-            isAuthenticated ? (
-              <SalesForecast currentUser={currentUser} onLogout={handleLogout} />
-            ) : (
-              <Navigate to="/login" replace />
-            )
+            <ProtectedRoute allowedRoles={["Admin", "Staff"]}>
+              <SalesOverview currentUser={currentUser} onLogout={handleLogout} />
+            </ProtectedRoute>
           }
         />
         <Route
           path="/marketbasket"
           element={
-            isAuthenticated ? (
+            <ProtectedRoute allowedRoles={["Admin", "Staff"]}>
               <MarketBasket currentUser={currentUser} onLogout={handleLogout} />
-            ) : (
-              <Navigate to="/login" replace />
-            )
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/salesforecast"
+          element={
+            <ProtectedRoute allowedRoles={["Admin", "Staff"]}>
+              <SalesForecast currentUser={currentUser} onLogout={handleLogout} />
+            </ProtectedRoute>
           }
         />
         <Route
           path="/customerbehavior"
           element={
-            isAuthenticated ? (
+            <ProtectedRoute allowedRoles={["Admin", "Staff"]}>
               <CustomerBehavior currentUser={currentUser} onLogout={handleLogout} />
-            ) : (
-              <Navigate to="/login" replace />
-            )
+            </ProtectedRoute>
           }
         />
         <Route
           path="/whatifanalysis"
           element={
-            isAuthenticated ? (
+            <ProtectedRoute allowedRoles={["Admin", "Staff"]}>
               <WhatIfAnalysis currentUser={currentUser} onLogout={handleLogout} />
-            ) : (
-              <Navigate to="/login" replace />
-            )
+            </ProtectedRoute>
           }
         />
         <Route
           path="/salesdata"
           element={
-            isAuthenticated ? (
-              <SalesData onLogout={handleLogout} /> 
-            ) : (
-              <Navigate to="/login" replace />
-            )
+            <ProtectedRoute allowedRoles={["Admin", "Staff"]}>
+              <SalesData onLogout={handleLogout} />
+            </ProtectedRoute>
           }
         />
         <Route
-            path="/archive-data"
-            element={
-              isAuthenticated ? (
-                <ArchiveData onLogout={handleLogout}/>
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-        <Route
-          path="/addrecord"
+          path="/archive-data"
           element={
-            isAuthenticated ? (
-              <AddRecord onLogout={handleLogout} /> 
-            ) : (
-              <Navigate to="/login" replace />
-            )
-          }
-        />
-        <Route
-          path="/editrecord/:id"
-          element={
-            isAuthenticated ? (
-              <EditRecord onLogout={handleLogout} />
-            ) : (
-              <Navigate to="/login" replace />
-            )
-          }
-        />
-        <Route path="/" element={<Navigate to={isAuthenticated ? "/marketbasket" : "/login"} replace />} />
-
-        <Route
-          path="/user-management"
-          element={
-            isAuthenticated ? (
-              <UserManagement onLogout={handleLogout} />
-            ) : (
-              <Navigate to="/login" replace />
-            )
-          }
-        />
-        <Route
-          path="/account"
-          element={
-            isAuthenticated ? (
-              <Account onLogout={handleLogout} />
-            ) : (
-              <Navigate to="/login" replace />
-            )
+            <ProtectedRoute allowedRoles={["Admin", "Staff"]}>
+              <ArchiveData onLogout={handleLogout} />
+            </ProtectedRoute>
           }
         />
         <Route
           path="/help"
           element={
-            isAuthenticated ? (
+            <ProtectedRoute allowedRoles={["Admin", "Staff"]}>
               <Help onLogout={handleLogout} />
-            ) : (
-              <Navigate to="/login" replace />
-            )
+            </ProtectedRoute>
           }
         />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/update-password" element={<UpdatePassword />} />     
+        <Route
+          path="/account"
+          element={
+            <ProtectedRoute allowedRoles={["Admin", "Staff"]}>
+              <Account onLogout={handleLogout} />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* --- Admin Only --- */}
+        <Route
+          path="/addrecord"
+          element={
+            <ProtectedRoute allowedRoles={["Admin"]}>
+              <AddRecord onLogout={handleLogout} />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/editrecord/:id"
+          element={
+            <ProtectedRoute allowedRoles={["Admin"]}>
+              <EditRecord onLogout={handleLogout} />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/user-management"
+          element={
+            <ProtectedRoute allowedRoles={["Admin"]}>
+              <UserManagement onLogout={handleLogout} />
+            </ProtectedRoute>
+          }
+        />
       </Routes>
     </Router>
-  )
+  );
 }
 
-export default App
+export default App;
