@@ -52,6 +52,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       } else if (data.user && data.user.email) {
         // Successful login
         onLogin(data.user.email);
+        window.location.href = "/salesoverview";
       } else {
         setError("Unknown error occurred");
       }

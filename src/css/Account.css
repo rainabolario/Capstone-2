@@ -50,7 +50,7 @@
 }
 
 /* Added warning banner with orange color */
-.security-warning-banner {
+.notification-banner {
   display: flex;
   align-items: flex-start;
   gap: 15px;
@@ -58,20 +58,20 @@
   border: 1px solid #fb923c;
   border-radius: 8px;
   padding: 15px 20px;
-  margin: 20px;
+  margin: 20px 20px 0px 20px;
 }
 
-.security-warning-banner.success {
+.notification-banner.success {
   background-color: #d1fae5;
   border-color: #10b981;
 }
 
-.security-warning-banner.success .warning-icon {
+.notification-banner.success .warning-icon {
   color: #065f46;
 }
 
-.security-warning-banner.success .warning-content h3,
-.security-warning-banner.success .warning-content p {
+.notification-banner.success .warning-content h3,
+.notification-banner.success .warning-content p {
   color: #065f46;
 }
 
@@ -171,100 +171,23 @@
   font-weight: normal;
 }
 
-/* Updated security container h2 to match profile and password containers */
-.security-container h2 {
-  font-family: var(--general-font);
-  color: black;
-  font-size: 16px;
-  margin: 0px 0px 10px 0px;
-  font-weight: normal;
-}
-
-.security-container {
-  display: flex;
-  flex-direction: column;
-  padding: 25px;
-  border-radius: 10px;
-  background-color: var(--white);
-  box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.25);
-}
-
-/* Updated security description to match other section descriptions */
-.security-description {
-  font-family: var(--general-font);
-  color: var(--dark-gray);
-  font-size: 14px;
-  margin: 0px 0px 25px 0px;
-  line-height: 1.5;
-  padding-bottom: 15px;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-/* Added security question group styling */
-.security-question-group {
-  display: flex;
-  flex-direction: column;
-  margin-bottom: 25px;
-}
-
-/* Updated security question labels to match other input labels */
-.security-question-group label {
-  font-family: var(--general-font);
-  color: var(--dark-gray);
-  font-size: 12px;
-  font-weight: normal;
-  margin-bottom: 10px;
-}
-
-.security-question-group .answer-label {
-  margin-top: 15px;
-}
-
-/* Fixed input width to prevent overflow */
-.security-select,
-.security-input {
-  width: 100%;
-  max-width: 100%;
-  box-sizing: border-box;
-  border-radius: 8px;
-  background-color: white;
-  border: 1px solid #ccc;
-  padding: 12px 15px;
-  font-family: var(--general-font);
-  font-size: 14px;
-  color: var(--dark-gray);
-}
-
-.security-select:focus,
-.security-input:focus {
-  outline: none;
-  border-color: var(--orange);
-}
-
 .profile-content {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   color: black;
+  gap: 20px;
+}
+
+.password-content {
+  display: flex;
+  flex-direction: column;
   gap: 10px;
 }
 
-.password-content,
 .delete-content {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-}
-
-.profile-content input,
-.password-content input,
-.delete-content input {
-  width: -webkit-fill-available;
-  border-radius: 10px;
-  background-color: transparent;
-  border: 1px solid #ccc;
-  padding: 10px 15px;
-  margin-bottom: 10px;
-  color: black;
+  gap: 20px;
 }
 
 .role-container select {
@@ -277,15 +200,19 @@
   color: black;
 }
 
-.first-name-container,
-.last-name-container,
+.email-role-wrapper {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+}
+
+.name-container,
 .email-container,
 .role-container {
   width: 100%;
 }
 
-.first-name-container p,
-.last-name-container p,
+.name-container p,
 .email-container p,
 .role-container p,
 .current-password-container p,
@@ -302,15 +229,17 @@
 .delete-instructions {
   font-family: var(--general-font);
   font-size: 12px;
-  margin: 0px 0px 10px 0px;
+  margin: 0px 0px 20px 0px;
   background-color: var(--red);
   border-radius: 10px;
   padding: 10px 15px;
+  display: flex;
+  align-items: center;
 }
 
 .delete-instructions p {
   color: var(--white);
-  margin-left: 20px;
+  margin-left: 5px;
   margin-top: 10px;
   margin-bottom: 10px;
   font-size: 14px;
@@ -319,7 +248,7 @@
 .delete-instructions svg {
   vertical-align: text-top;
   color: var(--white);
-  height: 18px;
+  height: 21px;
 }
 
 .button-content {

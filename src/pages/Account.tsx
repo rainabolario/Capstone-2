@@ -1,49 +1,164 @@
-
 import type React from "react"
-
 import "../css/Account.css"
 import Sidebar from "../components/Sidebar"
-import { BookOpen, Settings, Shield, CheckCircle } from "lucide-react"
-import { useState } from "react"
+import { BookOpen, Settings, CheckCircle, Shield } from "lucide-react"
+import { useState, useEffect } from "react"
+import { supabase } from "../supabaseClient"
+import ProfileTab from "../components/tabs/ProfileTab"
+import PasswordTab from "../components/tabs/PasswordTab"
 
 interface AccountProps {
   onLogout?: () => void
 }
 
+interface User {
+  id: string
+  name: string
+  email: string 
+  role: string
+}
+
 const Account: React.FC<AccountProps> = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState<"profile" | "password" | "security">("profile")
-  const [securityQuestionsSet, setSecurityQuestionsSet] = useState(false)
-  const [showConfirmModal, setShowConfirmModal] = useState(false)
-  const [showSuccessModal, setShowSuccessModal] = useState(false)
-  const [securityQuestions, setSecurityQuestions] = useState({
-    question1: "",
-    answer1: "",
-    question2: "",
-    answer2: "",
-    question3: "",
-    answer3: "",
-  })
 
-  const handleSaveSecurityQuestions = () => {
-    if (
-      !securityQuestions.question1 ||
-      !securityQuestions.answer1 ||
-      !securityQuestions.question2 ||
-      !securityQuestions.answer2 ||
-      !securityQuestions.question3 ||
-      !securityQuestions.answer3
-    ) {
-      alert("Please fill in all security questions and answers")
-      return
+  // User profile states
+  const [loading, setLoading] = useState(false)
+  const [user, setUser] = useState<User | null>(null)
+  const [originalUser, setOriginalUser] = useState<User | null>(null)
+  const [isEditing, setIsEditing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+
+  // Password change states
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+
+  useEffect(() => {
+  supabase.auth.getSession().then(({ data }) => {
+    console.log("Current Supabase session:", data.session);
+  });
+  fetchUserData();
+}, []);
+
+
+  const fetchUserData = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
+      console.log("authUser", authUser)
+      if (authError) throw authError
+      if (!authUser) throw new Error("No user logged in")
+      
+      const { data, error: userTableError } = await supabase
+        .from("users")
+        .select("*")
+        .eq("id", authUser.id)
+        .single()
+      if (userTableError) throw userTableError
+      if (!data) throw new Error("User data not found")
+
+      setUser(data)
+      setOriginalUser(data)
+    } catch (error: any) {
+      setError(error.message)
+    } finally {
+      setLoading(false)
     }
-    setShowConfirmModal(true)
   }
 
-  const confirmSaveSecurityQuestions = () => {
-    setSecurityQuestionsSet(true)
-    setShowConfirmModal(false)
-    setShowSuccessModal(true)
-  }
+  const handleChangePassword = async () => {
+    setPasswordError("");
+
+    // Make sure of the user's email to perform the check
+    if (!user || !user.email) {
+      setPasswordError("Could not find user information. Please refresh.");
+      return;
+    }
+
+    // Add validation for the current password field
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordError("Please fill out all fields.");
+      return;
+    }
+
+    // Verify the user's current password by trying to sign in
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: user.email,
+      password: currentPassword,
+    });
+
+    if (signInError) {
+      setPasswordError("Incorrect current password. Please try again.");
+      return; // Stop the function if the password is wrong
+    }
+
+    // Validate the new password
+    if (newPassword.length < 8) {
+      setPasswordError("New password must be at least 8 characters.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError("New passwords do not match.");
+      return;
+    }
+    if (newPassword === currentPassword) {
+      setPasswordError("New password cannot be the same as the current password.");
+      return;
+    }
+
+    // Update the user's password in Supabase Auth
+    const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+
+    if (updateError) {
+      setPasswordError(updateError.message);
+    } else {
+      setSuccess("Password updated successfully!"); 
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setTimeout(() => setSuccess(null), 3000); 
+    }
+  };
+
+  const saveProfile = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      if (!user) throw new Error("No user to save.");
+
+      const { error } = await supabase
+        .from('users')
+        .update({
+          name: user.name,
+          email: user.email,
+          role: user.role
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      setOriginalUser(user);
+      setIsEditing(false);
+      setSuccess("Profile updated successfully!");
+
+      setTimeout(() => setSuccess(null), 5000);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const cancelEdit = () => {
+    setUser(originalUser);
+    setIsEditing(false);
+  };
+
 
   return (
     <div className="account-container">
@@ -57,17 +172,18 @@ const Account: React.FC<AccountProps> = ({ onLogout }) => {
           </p>
         </div>
 
-        <div className={`security-warning-banner ${securityQuestionsSet ? "success" : ""}`}>
-          {securityQuestionsSet ? <CheckCircle className="warning-icon" /> : <Shield className="warning-icon" />}
-          <div className="warning-content">
-            <h3>{securityQuestionsSet ? "Security Questions Set Up" : "Security Questions Not Set Up"}</h3>
-            <p>
-              {securityQuestionsSet
-                ? "Your security questions have been successfully configured. You can use them for account recovery."
-                : "You have not set up your security questions yet. These questions are essential for account recovery if you forgot your password."}
-            </p>
+        {(success || error) && (
+          <div className={`notification-banner ${success ? 'success' : 'error'}`}>
+            {success ? 
+              <CheckCircle className="warning-icon" /> : 
+              <Shield className="warning-icon" />
+            }
+            <div className="warning-content">
+              <h3>{success ? 'Success' : 'An Error Occurred'}</h3>
+              <p>{success || error}</p>
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="account-main-layout">
           <div className="account-tabs">
@@ -85,227 +201,36 @@ const Account: React.FC<AccountProps> = ({ onLogout }) => {
               <Settings className="tab-icon" />
               Change Password
             </button>
-            <button
-              className={`tab-button ${activeTab === "security" ? "active" : ""}`}
-              onClick={() => setActiveTab("security")}
-            >
-              <Shield className="tab-icon" />
-              Security Questions
-            </button>
           </div>
 
           <div className="account-settings-content">
             {activeTab === "profile" && (
-              <>
-                <div className="profile-container">
-                  <h2>Profile Information</h2>
-                  <div className="profile-content">
-                    <div className="first-name-container">
-                      <p>First Name</p>
-                      <input type="text" placeholder="First Name" />
-                    </div>
-                    <div className="last-name-container">
-                      <p>Last Name</p>
-                      <input type="text" placeholder="Last Name" />
-                    </div>
-                  </div>
-                  <div className="profile-content">
-                    <div className="email-container">
-                      <p>Email</p>
-                      <input type="email" placeholder="your@email.com" />
-                    </div>
-                    <div className="role-container">
-                      <p>Role</p>
-                      <select name="role" id="role">
-                        <option value="admin">Admin</option>
-                        <option value="user">Staff</option>
-                        <option value="viewer">Other</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="button-content">
-                    <button className="edit-button">Edit</button>
-                  </div>
-                </div>
-
-                <div className="delete-container">
-                  <h2>Delete Account</h2>
-                  <div className="delete-instructions">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth={1.5}
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"
-                      />
-                    </svg>
-                    <p>Once you delete your account, there is no going back. Please be certain.</p>
-                  </div>
-                  <div className="delete-content">
-                    <div className="type-email-container">
-                      <p>To confirm, type your email in the box below</p>
-                      <input type="email" placeholder="your@email.com" />
-                    </div>
-                    <div className="type-delete-container">
-                      <p>To confirm, type "delete" in the box below</p>
-                      <input type="text" placeholder="delete" />
-                    </div>
-                  </div>
-                  <div className="button-content">
-                    <button className="delete-button">Delete Account</button>
-                  </div>
-                </div>
-              </>
+              <ProfileTab
+                user={user}
+                isEditing={isEditing}
+                loading={loading}
+                setUser={setUser}
+                setIsEditing={setIsEditing}
+                saveProfile={saveProfile}
+                cancelEdit={cancelEdit}
+              />
             )}
 
             {activeTab === "password" && (
-              <div className="password-container">
-                <h2>Password</h2>
-                <div className="password-content">
-                  <div className="current-password-container">
-                    <p>Current Password</p>
-                    <input type="password" placeholder="Current Password" />
-                  </div>
-                  <div className="new-password-container">
-                    <p>New Password</p>
-                    <input type="password" placeholder="New Password" />
-                  </div>
-                  <div className="reenter-password-container">
-                    <p>Re-enter New Password</p>
-                    <input type="password" placeholder="Re-enter New Password" />
-                  </div>
-                </div>
-                <div className="button-content">
-                  <button className="edit-button">Update Password</button>
-                </div>
-              </div>
-            )}
-
-            {activeTab === "security" && (
-              <div className="security-container">
-                <h2>SECURITY QUESTIONS</h2>
-                <p className="security-description">
-                  Please select three security questions and provide answers. These will be used to verify your identity
-                  if you need to reset your password.
-                </p>
-
-                <div className="security-question-group">
-                  <label>SECURITY QUESTION 1:</label>
-                  <select
-                    className="security-select"
-                    value={securityQuestions.question1}
-                    onChange={(e) => setSecurityQuestions({ ...securityQuestions, question1: e.target.value })}
-                  >
-                    <option value="">Select a question</option>
-                    <option value="pet">What was the name of your first pet?</option>
-                    <option value="city">In what city were you born?</option>
-                    <option value="school">What is the name of your elementary school?</option>
-                    <option value="food">What is your favorite food?</option>
-                  </select>
-                  <label className="answer-label">YOUR ANSWER:</label>
-                  <input
-                    type="text"
-                    placeholder="Enter your answer"
-                    className="security-input"
-                    value={securityQuestions.answer1}
-                    onChange={(e) => setSecurityQuestions({ ...securityQuestions, answer1: e.target.value })}
-                  />
-                </div>
-
-                <div className="security-question-group">
-                  <label>SECURITY QUESTION 2:</label>
-                  <select
-                    className="security-select"
-                    value={securityQuestions.question2}
-                    onChange={(e) => setSecurityQuestions({ ...securityQuestions, question2: e.target.value })}
-                  >
-                    <option value="">Select a question</option>
-                    <option value="pet">What was the name of your first pet?</option>
-                    <option value="city">In what city were you born?</option>
-                    <option value="school">What is the name of your elementary school?</option>
-                    <option value="food">What is your favorite food?</option>
-                  </select>
-                  <label className="answer-label">YOUR ANSWER:</label>
-                  <input
-                    type="text"
-                    placeholder="Enter your answer"
-                    className="security-input"
-                    value={securityQuestions.answer2}
-                    onChange={(e) => setSecurityQuestions({ ...securityQuestions, answer2: e.target.value })}
-                  />
-                </div>
-
-                <div className="security-question-group">
-                  <label>SECURITY QUESTION 3:</label>
-                  <select
-                    className="security-select"
-                    value={securityQuestions.question3}
-                    onChange={(e) => setSecurityQuestions({ ...securityQuestions, question3: e.target.value })}
-                  >
-                    <option value="">Select a question</option>
-                    <option value="pet">What was the name of your first pet?</option>
-                    <option value="city">In what city were you born?</option>
-                    <option value="school">What is the name of your elementary school?</option>
-                    <option value="food">What is your favorite food?</option>
-                  </select>
-                  <label className="answer-label">YOUR ANSWER:</label>
-                  <input
-                    type="text"
-                    placeholder="Enter your answer"
-                    className="security-input"
-                    value={securityQuestions.answer3}
-                    onChange={(e) => setSecurityQuestions({ ...securityQuestions, answer3: e.target.value })}
-                  />
-                </div>
-
-                <div className="button-content">
-                  <button className="edit-button" onClick={handleSaveSecurityQuestions}>
-                    Save Security Questions
-                  </button>
-                </div>
-              </div>
+              <PasswordTab
+                currentPassword={currentPassword}
+                newPassword={newPassword}
+                confirmPassword={confirmPassword}
+                passwordError={passwordError}
+                setCurrentPassword={setCurrentPassword}
+                setNewPassword={setNewPassword}
+                setConfirmPassword={setConfirmPassword}
+                handleChangePassword={handleChangePassword}
+              />
             )}
           </div>
         </div>
       </div>
-
-      {showConfirmModal && (
-        <div className="modal-overlay" onClick={() => setShowConfirmModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h3>Confirm Security Questions</h3>
-            <p>Are you sure you want to save these security questions? Make sure you remember your answers.</p>
-            <div className="modal-buttons">
-              <button className="modal-cancel" onClick={() => setShowConfirmModal(false)}>
-                Cancel
-              </button>
-              <button className="modal-confirm" onClick={confirmSaveSecurityQuestions}>
-                Confirm
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showSuccessModal && (
-        <div className="modal-overlay" onClick={() => setShowSuccessModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <CheckCircle className="success-icon" />
-            <h3>Security Questions Saved Successfully</h3>
-            <p>Your security questions have been configured and can now be used for account recovery.</p>
-            <div className="modal-buttons">
-              <button className="modal-confirm" onClick={() => setShowSuccessModal(false)}>
-                OK
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

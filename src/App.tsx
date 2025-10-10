@@ -14,7 +14,8 @@ import UserManagement from "./pages/UserManage"
 import Account from "./pages/Account"
 import Help from "./pages/Help"
 import NeedHelp from "./pages/NeedHelp"
-import ForgotPassword from "./pages/ForgotPassword"
+import ForgotPassword from "./pages/ForgotPassword";
+import UpdatePassword from "./pages/UpdatePassword";
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
@@ -170,7 +171,9 @@ function App() {
               <Navigate to="/login" replace />
             )
           }
-        />        
+        />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/update-password" element={<UpdatePassword />} />     
       </Routes>
     </Router>
   )
