@@ -87,11 +87,15 @@
 }
 
 .archived-table-container {
-  background-color: white;
+  background-color: #fff;
   border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  overflow: hidden;
-  margin-bottom: 16px;
+  border-radius: 12px;
+  overflow-x: auto;       /* ✅ Enables horizontal scrolling */
+  overflow-y: hidden;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  scrollbar-color: #ec7a1c #f9f9fa; /* for Firefox */
+  scrollbar-width: thin;
 }
 
 .archived-table {
