@@ -11,26 +11,40 @@ import EditUserModal from "./EditAccount";
 import { supabase } from "../supabaseClient";
 
 interface User {
-  id: string;           
+  id: string | number;
   name: string;
   email: string;
   role: "Admin" | "Staff" | string;
 }
 
-
 const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
+  const [selectedUsers, setSelectedUsers] = useState<Set<string | number>>(new Set());
   const [openRegister, setOpenRegister] = useState(false);
   const [openEditModal, setOpenEditModal] = useState(false);
   const [userToEdit, setUserToEdit] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Fetch users from Supabase
+  // ✅ Fetch users from Supabase
   const fetchUsers = async () => {
-    const { data, error } = await supabase.from("users").select("*").order("name", { ascending: true });
-    if (error) console.error("Error fetching users:", error);
-    else setUsers(data as User[]);
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("users")
+        .select("*")
+        .order("name", { ascending: true });
+
+      if (error) {
+        console.error("Error fetching users:", error);
+      } else if (data) {
+        setUsers(data as User[]);
+      }
+    } catch (err) {
+      console.error("Unexpected error fetching users:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -38,12 +52,14 @@ const UserManagement: React.FC = () => {
   }, []);
 
   const filteredUsers = users.filter(
-    (u) => u.name.toLowerCase().includes(searchTerm.toLowerCase()) || u.email.toLowerCase().includes(searchTerm.toLowerCase())
+    (u) =>
+      u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      u.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value);
 
-  const handleSelectUser = (id: string) => {
+  const handleSelectUser = (id: string | number) => {
     setSelectedUsers((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(id)) newSet.delete(id);
@@ -73,6 +89,30 @@ const UserManagement: React.FC = () => {
     setSelectedUsers(new Set());
   };
 
+  // Optional delete function (for later use)
+ const handleDeleteUser = async () => {
+  if (selectedUsers.size === 0) return;
+
+  const confirmDelete = window.confirm("Are you sure you want to delete the selected user(s)?");
+  if (!confirmDelete) return;
+
+  const ids = Array.from(selectedUsers);
+
+  try {
+    // Delete from Supabase
+    const { error } = await supabase.from("users").delete().in("id", ids);
+    if (error) throw error;
+
+    // Remove deleted users from local state
+    setUsers((prev) => prev.filter((u) => !ids.includes(u.id)));
+    setSelectedUsers(new Set());
+    alert("User(s) deleted successfully!");
+  } catch (err) {
+    console.error("Error deleting users:", err);
+    alert("Failed to delete user(s).");
+  }
+};
+
   return (
     <div className="user-management-container">
       <Sidebar />
@@ -94,6 +134,7 @@ const UserManagement: React.FC = () => {
             />
             <SearchIcon className="search-icon" />
           </div>
+
           <div className="buttons-container">
             <Button
               variant="outlined"
@@ -118,7 +159,7 @@ const UserManagement: React.FC = () => {
                 "&.Mui-disabled": { border: "none" },
                 padding: "8px 25px",
               }}
-              disabled={selectedUsers.size === 0}
+              disabled={selectedUsers.size !== 1}
               startIcon={<EditIcon />}
               onClick={handleOpenEditModal}
             >
@@ -136,6 +177,7 @@ const UserManagement: React.FC = () => {
               }}
               disabled={selectedUsers.size === 0}
               startIcon={<DeleteIcon />}
+              onClick={handleDeleteUser}
             >
               Delete User
             </Button>
@@ -143,53 +185,67 @@ const UserManagement: React.FC = () => {
         </div>
 
         <div className="users-table-container">
-          <table className="users-table">
-            <thead>
-              <tr>
-                <th>
-                  <Checkbox
-                    color="primary"
-                    indeterminate={selectedUsers.size > 0 && selectedUsers.size < filteredUsers.length}
-                    checked={filteredUsers.length > 0 && selectedUsers.size === filteredUsers.length}
-                    onChange={handleSelectAll}
-                  />
-                </th>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Role</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredUsers.map((u) => (
-                <tr key={u.id}>
-                  <td>
+          {loading ? (
+            <Typography sx={{ mt: 2 }}>Loading users...</Typography>
+          ) : filteredUsers.length === 0 ? (
+            <Typography sx={{ mt: 2 }}>No users found.</Typography>
+          ) : (
+            <table className="users-table">
+              <thead>
+                <tr>
+                  <th>
                     <Checkbox
                       color="primary"
-                      checked={selectedUsers.has(u.id)}
-                      onChange={() => handleSelectUser(u.id)}
+                      indeterminate={
+                        selectedUsers.size > 0 && selectedUsers.size < filteredUsers.length
+                      }
+                      checked={
+                        filteredUsers.length > 0 &&
+                        selectedUsers.size === filteredUsers.length
+                      }
+                      onChange={handleSelectAll}
                     />
-                  </td>
-                  <td>{u.name}</td>
-                  <td>{u.email}</td>
-                  <td>{u.role}</td>
+                  </th>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Role</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filteredUsers.map((u) => (
+                  <tr key={u.id}>
+                    <td>
+                      <Checkbox
+                        color="primary"
+                        checked={selectedUsers.has(u.id)}
+                        onChange={() => handleSelectUser(u.id)}
+                      />
+                    </td>
+                    <td>{u.name}</td>
+                    <td>{u.email}</td>
+                    <td>{u.role}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
 
+      {/* Register Modal */}
       {openRegister && (
         <Register
           onClose={() => setOpenRegister(false)}
-          onSubmit={(newUser) => { setUsers((prev) => [
-                ...prev,
-                { ...newUser, role: newUser.role as "Admin" | "Staff" } 
+          onSubmit={(newUser) => {
+            setUsers((prev) => [
+              ...prev,
+              { ...newUser, role: newUser.role as "Admin" | "Staff" },
             ]);
-            }}
+          }}
         />
       )}
 
+      {/* Edit Modal */}
       {openEditModal && userToEdit && (
         <EditUserModal
           user={userToEdit}
