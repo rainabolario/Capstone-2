@@ -118,25 +118,29 @@ const UserManagement: React.FC = () => {
     <div className="user-management-container">
       <Sidebar />
       <div className="user-management-content">
-        <h2>USER MANAGEMENT</h2>
+        <div className="header-section">
+          <h2>USER MANAGEMENT</h2>
+        </div>
         <Typography variant="caption" sx={{ color: "gray", fontSize: 14, mb: 1, mt: 1 }}>
           Manage all user profiles here. You can add, edit, or delete users as needed.
         </Typography>
         <Divider />
 
-        <div className="action-container">
+        <div className="action-bar">
           <div className="search-container">
             <input
               type="text"
-              placeholder="Search…"
+              placeholder="Search"
               value={searchTerm}
               onChange={handleSearch}
               className="search-input"
             />
-            <SearchIcon className="search-icon" />
+            <button className="sales-search-button">
+              <SearchIcon className="search-icon" />
+            </button>
           </div>
 
-          <div className="buttons-container">
+          <div className="action-buttons">
             <Button
               variant="outlined"
               sx={{
@@ -157,7 +161,6 @@ const UserManagement: React.FC = () => {
                 color: "black",
                 border: "none",
                 "&:hover": { backgroundColor: "#EC7A1C", color: "white" },
-                "&.Mui-disabled": { border: "none" },
                 padding: "8px 25px",
               }}
               disabled={selectedUsers.size !== 1}
@@ -173,7 +176,6 @@ const UserManagement: React.FC = () => {
                 color: "black",
                 border: "none",
                 "&:hover": { backgroundColor: "#EC7A1C", color: "white" },
-                "&.Mui-disabled": { border: "none" },
                 padding: "8px 25px",
               }}
               disabled={selectedUsers.size === 0}

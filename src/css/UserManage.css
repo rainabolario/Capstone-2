@@ -25,6 +25,7 @@
     display: flex;
     flex-direction: column;
     padding: 20px;
+    min-width: 0;
 }
 
 .user-management-content h2{
@@ -41,7 +42,6 @@
     overflow-y: auto;
     overflow-x: auto;
     border-radius: 8px;
-    margin-top: 16px;
     max-height: 70vh;
 }
 
@@ -81,13 +81,6 @@
 .search-input{
     color: black;
     position: relative;
-}
-
-.search-container svg{
-    position: absolute;
-    color: gray;
-    top: 20%;
-    right: -13%;
 }
 
 .action-container{

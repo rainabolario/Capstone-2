@@ -177,7 +177,7 @@ const ArchivedData: React.FC = () => {
               placeholder="Search"
               value={searchTerm}
               onChange={handleSearch}
-              className="archived-search-input"
+              className="search-input"
             />
             <button className="sales-search-button">
               <SearchIcon className="search-icon" />
@@ -195,10 +195,7 @@ const ArchivedData: React.FC = () => {
               "&:hover": {
                 backgroundColor: "#ff8c42",
                 color: "white",
-              },
-              "&.Mui-disabled": {
-                border: "none",
-              },
+              }
             }}
             disabled={userRole !== "Admin" || selectedIds.length === 0} 
           >

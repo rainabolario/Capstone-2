@@ -17,6 +17,7 @@
     display: flex;
     flex-direction: row;
     background-color: var(--bg);
+    min-height: 100vh;
 }
 
 .add-form-container {

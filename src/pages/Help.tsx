@@ -56,7 +56,7 @@ const Help: React.FC<HelpProps> = ({ onLogout }) => {
         <div className="top-content">
           <h1>HELP CENTER</h1>
           <p>Find answers to your questions and get the help you need</p>
-          <div className="search-bar">
+          <div className="search-bar-container">
             <Search className="search-icon" />
             <input 
               type="text" 
@@ -72,7 +72,7 @@ const Help: React.FC<HelpProps> = ({ onLogout }) => {
             <>
               <h2>Frequently Asked Questions</h2>
 
-              <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2}}>
+              <Box className="nav-box" sx={{ borderBottom: 1, borderColor: "divider", mb: 2}}>
                 <Tabs
                   className="category-tabs"
                   value={activeTab}

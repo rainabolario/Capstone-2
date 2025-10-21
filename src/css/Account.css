@@ -24,6 +24,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 /* Added header styling */
@@ -367,3 +368,22 @@
 .modal-confirm:hover {
   background-color: #d66a15;
 }
+
+@media(max-width: 1024px){
+  .account-main-layout {
+    flex-direction: column;
+  }
+}
+
+@media(max-width: 800px){
+  .email-role-wrapper {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .button-content button{
+    width: 100%;
+    margin: 10px 0px;
+  }
+}
+
