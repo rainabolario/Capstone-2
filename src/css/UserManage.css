@@ -34,13 +34,21 @@
     margin: 30px 0px 0px 0px;
 }
 
-.users-table-container{
+.users-table-container {
     flex: 1;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: auto;
     border-radius: 8px;
     margin-top: 16px;
+    max-height: 70vh;
+}
+
+.users-table-container::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+    opacity: 0;
 }
 
 .users-table {
