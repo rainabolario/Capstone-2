@@ -14,7 +14,7 @@
   flex-direction: row;
   background-color: var(--bg);
   font-family: var(--general-font);
-  height: 100vh;
+  min-height: 100vh;
 }
 
 .market-basket-content {
@@ -83,7 +83,7 @@
 /* Product Recommendations */
 .market-basket-div4 {
   grid-column: 1 / span 1;
-  grid-row: 4 / span 2;
+  grid-row: 4 / span 3;
 }
 
 /* Revenue vs Products */
@@ -113,13 +113,13 @@
 /* How to Interpret */
 .market-basket-div10 {
   grid-column: 2 / span 2;
-  grid-row: 5 / span 1; /* Just row 5 */
+  grid-row: 5 / span 2; /* Just row 5 */
 }
 
 /* Top 10 Combinations by Support */
 .market-basket-div9 {
   grid-column: 4;
-  grid-row: 3 / span 3; 
+  grid-row: 3 / span 4; 
 }
 
 
