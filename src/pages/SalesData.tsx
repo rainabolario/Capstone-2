@@ -6,6 +6,7 @@ import { AddOutlined, Inventory2Outlined, EditOutlined } from "@mui/icons-materi
 import { supabase } from "../supabaseClient";
 import { Checkbox } from "@mui/material";
 import { Typography, Divider, Button } from "@mui/material";
+import SearchIcon from "@mui/icons-material/Search";
 
 interface SalesRecord {
   id: string;
@@ -213,6 +214,9 @@ const SalesData: React.FC<SalesDataProps> = () => {
               onChange={handleSearch}
               className="search-input"
             />
+            <button className="sales-search-button">
+              <SearchIcon className="search-icon" />
+            </button>
           </div>
 
           {/* Only Admin sees these buttons */}

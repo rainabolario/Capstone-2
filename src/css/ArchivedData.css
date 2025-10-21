@@ -63,7 +63,7 @@
   width: 100%;
   padding: 10px 40px 10px 15px;
   border: 1px solid #ddd;
-  border-radius: 25px;
+  border-radius: 10px;
   font-size: 14px;
   background-color: white;
   outline: none;
@@ -76,8 +76,8 @@
 
 .archived-search-button {
   position: absolute;
-  right: 10px;
-  top: 50%;
+  right: -13%;
+  top: 55%;
   transform: translateY(-50%);
   background: none;
   border: none;

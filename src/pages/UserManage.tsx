@@ -10,6 +10,7 @@ import Register from "./Register";
 import EditUserModal from "./EditAccount";
 import { supabase } from "../supabaseClient";
 
+
 interface User {
   id: string | number;
   name: string;

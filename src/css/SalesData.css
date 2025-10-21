@@ -64,7 +64,7 @@
   width: 100%;
   padding: 10px 40px 10px 15px;
   border: 1px solid #ddd;
-  border-radius: 25px;
+  border-radius: 10px;
   font-size: 14px;
   background-color: white;
   outline: none;
@@ -79,6 +79,18 @@
   position: absolute;
   right: 10px;
   top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  padding: 5px;
+}
+
+.sales-search-button{
+    position: absolute;
+  right: -13%;
+  top: 30%;
   transform: translateY(-50%);
   background: none;
   border: none;

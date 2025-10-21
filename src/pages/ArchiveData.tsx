@@ -9,6 +9,7 @@ import {
   Button
 } from "@mui/material";
 import RestoreIcon from '@mui/icons-material/Restore';
+import SearchIcon from "@mui/icons-material/Search";
 
 interface SalesRecord {
   id: string;
@@ -178,11 +179,8 @@ const ArchivedData: React.FC = () => {
               onChange={handleSearch}
               className="archived-search-input"
             />
-            <button className="archived-search-button">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="11" cy="11" r="8"></circle>
-                <path d="m21 21-4.35-4.35"></path>
-              </svg>
+            <button className="sales-search-button">
+              <SearchIcon className="search-icon" />
             </button>
           </div>
 
