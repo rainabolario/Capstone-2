@@ -16,23 +16,28 @@ import "../../css/CustomerDetails.css";
 
 // ✅ Keep Customer flat (no nested data)
 export interface Customer {
-  name: string;
-  date: Dayjs | null;
-  time: Dayjs | null;
-  paymentMode: string;
-  orderMode: string;
+  name: string
+  date: Dayjs | null
+  time: Dayjs | null
+  paymentMode: string
+  orderMode: string
 }
 
 // ✅ Props for the component
 interface Props {
-  data: Customer;
-  onChange: (customer: Customer) => void;
+  data: Customer
+  onChange: (customer: Customer) => void
 }
 
 export default function CustomerDetails({ data, onChange }: Props) {
   const updateField = (field: keyof Customer, value: any) => {
-    onChange({ ...data, [field]: value });
-  };
+    onChange({ ...data, [field]: value })
+  }
+
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const capitalizedValue = e.target.value.toUpperCase()
+    updateField("name", capitalizedValue)
+  }
 
   return (
     <div className="customer-details-container">
@@ -48,7 +53,7 @@ export default function CustomerDetails({ data, onChange }: Props) {
           fullWidth
           InputLabelProps={{ shrink: true }}
           value={data.name}
-          onChange={(e) => updateField("name", e.target.value)}
+          onChange={handleNameChange}
         />
 
         {/* Date & Time */}
@@ -91,16 +96,10 @@ export default function CustomerDetails({ data, onChange }: Props) {
           <Select
             labelId="order-mode-label"
             value={data.orderMode}
-            onChange={(e: SelectChangeEvent) =>
-              updateField("orderMode", e.target.value)
-            }
+            onChange={(e: SelectChangeEvent) => updateField("orderMode", e.target.value)}
             displayEmpty
             renderValue={(selected) =>
-              selected ? (
-                selected
-              ) : (
-                <span style={{ color: "#9e9e9e" }}>Select order mode</span>
-              )
+              selected ? selected : <span style={{ color: "#9e9e9e" }}>Select order mode</span>
             }
           >
             <MenuItem value="Instagram">Instagram</MenuItem>
@@ -119,16 +118,10 @@ export default function CustomerDetails({ data, onChange }: Props) {
           <Select
             labelId="payment-mode-label"
             value={data.paymentMode}
-            onChange={(e: SelectChangeEvent) =>
-              updateField("paymentMode", e.target.value)
-            }
+            onChange={(e: SelectChangeEvent) => updateField("paymentMode", e.target.value)}
             displayEmpty
             renderValue={(selected) =>
-              selected ? (
-                selected
-              ) : (
-                <span style={{ color: "#9e9e9e" }}>Select payment mode</span>
-              )
+              selected ? selected : <span style={{ color: "#9e9e9e" }}>Select payment mode</span>
             }
           >
             <MenuItem value="Cash">Cash</MenuItem>
@@ -140,5 +133,5 @@ export default function CustomerDetails({ data, onChange }: Props) {
         </FormControl>
       </div>
     </div>
-  );
+  )
 }
