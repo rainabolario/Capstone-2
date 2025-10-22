@@ -14,26 +14,25 @@ import { TimePicker } from "@mui/x-date-pickers/TimePicker";
 import { Dayjs } from "dayjs";
 import "../../css/CustomerDetails.css";
 
-interface Customer {
+// ✅ Keep Customer flat (no nested data)
+export interface Customer {
   name: string;
-  unit: string;
-  street: string;
-  barangay: string;
-  city: string;
   date: Dayjs | null;
   time: Dayjs | null;
-  orderMode: string;
   paymentMode: string;
+  orderMode: string;
 }
 
+// ✅ Props for the component
 interface Props {
   data: Customer;
   onChange: (customer: Customer) => void;
 }
 
 export default function CustomerDetails({ data, onChange }: Props) {
-  const updateField = (field: keyof Customer, value: any) =>
+  const updateField = (field: keyof Customer, value: any) => {
     onChange({ ...data, [field]: value });
+  };
 
   return (
     <div className="customer-details-container">
@@ -52,47 +51,7 @@ export default function CustomerDetails({ data, onChange }: Props) {
           onChange={(e) => updateField("name", e.target.value)}
         />
 
-        {/* Address Fields */}
-        <div className="customer-address-field">
-          <TextField
-            label="Unit No."
-            placeholder="eg. 123"
-            variant="outlined"
-            InputLabelProps={{ shrink: true }}
-            style={{ width: "50%" }}
-            value={data.unit}
-            onChange={(e) => updateField("unit", e.target.value)}
-          />
-          <TextField
-            label="Street"
-            placeholder="eg. Main St."
-            variant="outlined"
-            InputLabelProps={{ shrink: true }}
-            style={{ width: "100%" }}
-            value={data.street}
-            onChange={(e) => updateField("street", e.target.value)}
-          />
-          <TextField
-            label="Barangay"
-            placeholder="eg. Barangay 1"
-            variant="outlined"
-            InputLabelProps={{ shrink: true }}
-            style={{ width: "100%" }}
-            value={data.barangay}
-            onChange={(e) => updateField("barangay", e.target.value)}
-          />
-          <TextField
-            label="City"
-            placeholder="eg. Manila"
-            variant="outlined"
-            InputLabelProps={{ shrink: true }}
-            style={{ width: "100%" }}
-            value={data.city}
-            onChange={(e) => updateField("city", e.target.value)}
-          />
-        </div>
-
-        {/* Date & Time Pickers side by side */}
+        {/* Date & Time */}
         <LocalizationProvider dateAdapter={AdapterDayjs}>
           <div className="datetime-row" style={{ display: "flex", gap: "16px" }}>
             <DatePicker
@@ -103,7 +62,7 @@ export default function CustomerDetails({ data, onChange }: Props) {
                 textField: {
                   fullWidth: true,
                   placeholder: "Select Date",
-                  InputLabelProps: { shrink: true }, // ✅ always shrink
+                  InputLabelProps: { shrink: true },
                 },
               }}
               sx={{ flex: 1 }}
@@ -116,7 +75,7 @@ export default function CustomerDetails({ data, onChange }: Props) {
                 textField: {
                   fullWidth: true,
                   placeholder: "Select Time",
-                  InputLabelProps: { shrink: true }, // ✅ always shrink
+                  InputLabelProps: { shrink: true },
                 },
               }}
               sx={{ flex: 1 }}

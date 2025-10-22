@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from "react"; 
+import React, { useState, useEffect } from "react";
 import Sidebar from "../components/Sidebar";
 import { useNavigate } from "react-router-dom";
 import "../css/SalesData.css";
 import { AddOutlined, Inventory2Outlined, EditOutlined } from "@mui/icons-material";
 import { supabase } from "../supabaseClient";
-import { Checkbox } from "@mui/material";
-import { Typography, Divider, Button } from "@mui/material";
+import { Checkbox, Typography, Divider, Button } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 
 interface SalesRecord {
@@ -34,72 +33,101 @@ const SalesData: React.FC<SalesDataProps> = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [salesData, setSalesData] = useState<SalesRecord[]>([]);
   const [selectedRecords, setSelectedRecords] = useState<Set<string>>(new Set());
-  const userRole = localStorage.getItem("userRole"); 
+  const userRole = localStorage.getItem("userRole");
 
-  // 🔹 Fetch data from Supabase
   const fetchData = async () => {
-    const { data, error } = await supabase
-      .from("orders")
-      .select(`
-        id,
-        created_at,
-        archived,
-        customers (
-          name, unit, street, barangay, city, order_mode, payment_mode, order_date, order_time
-        ),
-        order_items (
-          name, size, category, qty, price
+  const { data, error } = await supabase
+    .from("orders")
+    .select(`
+      id,
+      order_date,
+      order_time,
+      payment_mode,
+      order_mode,
+      medium_y,
+      total_amount,
+      archived,
+      customers (name),
+      order_items (
+        quantity,
+        subtotal,
+        menu_item_variants (
+          price,
+          menu_items (name),
+          category_sizes (
+            size,
+            category (name)
+          )
         )
-      `)
-      .order("created_at", { ascending: false });
+      )
+    `)
+    .order("order_date", { ascending: false });
 
-    if (error) {
-      console.error("Supabase fetch error:", error);
+  if (error) {
+    console.error("Supabase fetch error:", error);
+    return;
+  }
+
+  const formatted: SalesRecord[] = [];
+
+  data.forEach((order: any) => {
+    const orderItems = order.order_items || [];
+
+    if (orderItems.length === 0) {
+      // Show orders with no order_items as a single row with placeholders
+      formatted.push({
+        id: order.id,
+        name: order.customers?.name || "Unknown",
+        time: order.order_time || "",
+        date: order.order_date || "",
+        day: order.order_date
+          ? new Date(order.order_date).toLocaleDateString("en-US", { weekday: "long" })
+          : "",
+        item: "N/A",
+        itemSize: "N/A",
+        orderType: "N/A",
+        quantity: 0,
+        address: "",
+        medium: order.medium_y || "N/A",
+        mop: order.payment_mode || "N/A",
+        total: order.total_amount || 0,
+        archived: order.archived || false,
+      });
       return;
     }
 
-    const formatted: SalesRecord[] = data.flatMap((order: any) =>
-      order.order_items.map((item: any) => {
-        const orderDate = order.customers?.order_date
-          ? new Date(order.customers.order_date)
-          : null;
+    orderItems.forEach((item: any) => {
+      const variants = item.menu_item_variants ? [item.menu_item_variants] : [{}];
 
-        const formattedDate = orderDate ? orderDate.toLocaleDateString() : "";
-        const formattedDay = orderDate ? orderDate.toLocaleDateString("en-US", { weekday: "long" }) : "";
+      variants.forEach((variant: any) => {
+        const sizes = variant.category_sizes ? [variant.category_sizes] : [{}];
 
-        let formattedTime = "";
-        if (order.customers?.order_time) {
-          const [hours, minutes] = order.customers.order_time.split(":");
-          const date = new Date();
-          date.setHours(parseInt(hours), parseInt(minutes));
-          formattedTime = date.toLocaleTimeString("en-US", {
-            hour: "numeric",
-            minute: "2-digit",
-            hour12: true,
+        sizes.forEach((size: any) => {
+          formatted.push({
+            id: order.id,
+            name: order.customers?.name || "Unknown",
+            time: order.order_time || "",
+            date: order.order_date || "",
+            day: order.order_date
+              ? new Date(order.order_date).toLocaleDateString("en-US", { weekday: "long" })
+              : "",
+            item: variant.menu_items?.name || "N/A",
+            itemSize: size.size || "N/A",
+            orderType: size.category?.name || "N/A",
+            quantity: item.quantity || 0,
+            address: "",
+            medium: order.medium_y || "N/A",
+            mop: order.payment_mode || "N/A",
+            total: item.subtotal || item.quantity * (variant.price || 0),
+            archived: order.archived || false,
           });
-        }
+        });
+      });
+    });
+  });
 
-        return {
-          id: order.id,
-          name: order.customers?.name || "Unknown",
-          time: formattedTime,
-          date: formattedDate,
-          day: formattedDay,
-          item: item.name,
-          itemSize: item.size,
-          orderType: item.category,
-          quantity: item.qty,
-          address: `${order.customers?.unit || ""} ${order.customers?.street || ""}, ${order.customers?.barangay || ""}, ${order.customers?.city || ""}`,
-          medium: order.customers?.order_mode || "",
-          mop: order.customers?.payment_mode || "",
-          total: item.price * item.qty,
-          archived: order.archived || false,
-        };
-      })
-    );
-
-    setSalesData(formatted);
-  };
+  setSalesData(formatted);
+};
 
   useEffect(() => {
     fetchData();
@@ -116,7 +144,7 @@ const SalesData: React.FC<SalesDataProps> = () => {
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value);
   const handleAddRecord = () => {
-    if (userRole !== "Admin") return; // 🚫 Staff can't add
+    if (userRole !== "Admin") return;
     navigate("/addrecord");
   };
 
@@ -219,7 +247,6 @@ const SalesData: React.FC<SalesDataProps> = () => {
             </button>
           </div>
 
-          {/* Only Admin sees these buttons */}
           {userRole === "Admin" && (
             <div className="action-buttons">
               <Button
@@ -227,10 +254,7 @@ const SalesData: React.FC<SalesDataProps> = () => {
                 sx={{
                   color: "black",
                   border: "none",
-                  "&:hover": {
-                    backgroundColor: "#EC7A1C",
-                    color: "white",
-                  },
+                  "&:hover": { backgroundColor: "#EC7A1C", color: "white" },
                   padding: "8px 25px",
                 }}
                 onClick={handleAddRecord}
@@ -243,10 +267,7 @@ const SalesData: React.FC<SalesDataProps> = () => {
                 sx={{
                   color: "black",
                   border: "none",
-                  "&:hover": {
-                    backgroundColor: "#EC7A1C",
-                    color: "white",
-                  },
+                  "&:hover": { backgroundColor: "#EC7A1C", color: "white" },
                   padding: "8px 25px",
                 }}
                 onClick={handleArchiveRecord}
@@ -260,10 +281,7 @@ const SalesData: React.FC<SalesDataProps> = () => {
                 sx={{
                   color: "black",
                   border: "none",
-                  "&:hover": {
-                    backgroundColor: "#EC7A1C",
-                    color: "white",
-                  },
+                  "&:hover": { backgroundColor: "#EC7A1C", color: "white" },
                   padding: "8px 25px",
                 }}
                 onClick={handleEditRecord}
@@ -313,9 +331,7 @@ const SalesData: React.FC<SalesDataProps> = () => {
                         <Checkbox
                           sx={{
                             color: "#9ca3af",
-                            "&.Mui-checked": {
-                              color: "#EC7A1C",
-                            },
+                            "&.Mui-checked": { color: "#EC7A1C" },
                           }}
                           checked={selectedRecords.has(record.id)}
                           onChange={() => toggleRecordSelection(record.id)}

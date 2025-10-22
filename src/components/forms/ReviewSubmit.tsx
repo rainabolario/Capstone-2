@@ -3,16 +3,12 @@ import { Dayjs } from "dayjs";
 import "../../css/ReviewSubmit.css";
 
 // --- Interfaces ---
-interface Customer {
+export interface Customer {
   name: string;
-  unit: string;
-  street: string;
-  barangay: string;
-  city: string;
   date: Dayjs | null;
   time: Dayjs | null;
-  orderMode: string;
   paymentMode: string;
+  orderMode: string;
 }
 
 interface OrderItem {
@@ -57,9 +53,6 @@ export default function ReviewSubmit({ data }: Props) {
           </div>
           <div className="customer-fields-container">
             <div className="customer-labels">Address</div>
-            <div className="customer-values">
-              {`${customer.unit}, ${customer.street}, ${customer.barangay}, ${customer.city}`}
-            </div>
           </div>
         </div>
         <div className="customer-fields-container">
