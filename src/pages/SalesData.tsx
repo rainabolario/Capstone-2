@@ -36,105 +36,52 @@ const SalesData: React.FC<SalesDataProps> = () => {
   const userRole = localStorage.getItem("userRole");
 
   const fetchData = async () => {
-  const { data, error } = await supabase
-    .from("orders")
-    .select(`
-      id,
-      order_date,
-      order_time,
-      payment_mode,
-      order_mode,
-      medium_y,
-      total_amount,
-      archived,
-      customers (name),
-      order_items (
-        quantity,
-        subtotal,
-        menu_item_variants (
-          price,
-          menu_items (name),
-          category_sizes (
-            size,
-            category (name)
-          )
-        )
-      )
-    `)
-    .order("order_date", { ascending: false });
+    // <CHANGE> Simplified query to fetch directly from flat raw_orders table
+    const { data, error } = await supabase
+      .from("raw_orders")
+      .select("*")
+      .order("date", { ascending: false });
 
-  if (error) {
-    console.error("Supabase fetch error:", error);
-    return;
-  }
-
-  const formatted: SalesRecord[] = [];
-
-  data.forEach((order: any) => {
-    const orderItems = order.order_items || [];
-
-    if (orderItems.length === 0) {
-      // Show orders with no order_items as a single row with placeholders
-      formatted.push({
-        id: order.id,
-        name: order.customers?.name || "Unknown",
-        time: order.order_time || "",
-        date: order.order_date || "",
-        day: order.order_date
-          ? new Date(order.order_date).toLocaleDateString("en-US", { weekday: "long" })
-          : "",
-        item: "N/A",
-        itemSize: "N/A",
-        orderType: "N/A",
-        quantity: 0,
-        address: "",
-        medium: order.medium_y || "N/A",
-        mop: order.payment_mode || "N/A",
-        total: order.total_amount || 0,
-        archived: order.archived || false,
-      });
+    if (error) {
+      console.error("[v0] Supabase fetch error:", error);
       return;
     }
 
-    orderItems.forEach((item: any) => {
-      const variants = item.menu_item_variants ? [item.menu_item_variants] : [{}];
+    // <CHANGE> Direct mapping since raw_orders is already denormalized
+    const formatted: SalesRecord[] = data.map((record: any) => ({
+      id: record.id,
+      name: record.name || "Unknown",
+      time: record.time || "",
+      date: record.date || "",
+      day: record.day || "",
+      item: record.item || "N/A",
+      itemSize: record.item_size || "N/A",
+      orderType: record.order_type || "N/A",
+      quantity: record.quantity || 0,
+      address: record.address || "",
+      medium: record.medium_y || "N/A",
+      mop: record.mop_y || "N/A",
+      total: record.total_amount || 0,
+      archived: record.archived || false,
+    }));
 
-      variants.forEach((variant: any) => {
-        const sizes = variant.category_sizes ? [variant.category_sizes] : [{}];
-
-        sizes.forEach((size: any) => {
-          formatted.push({
-            id: order.id,
-            name: order.customers?.name || "Unknown",
-            time: order.order_time || "",
-            date: order.order_date || "",
-            day: order.order_date
-              ? new Date(order.order_date).toLocaleDateString("en-US", { weekday: "long" })
-              : "",
-            item: variant.menu_items?.name || "N/A",
-            itemSize: size.size || "N/A",
-            orderType: size.category?.name || "N/A",
-            quantity: item.quantity || 0,
-            address: "",
-            medium: order.medium_y || "N/A",
-            mop: order.payment_mode || "N/A",
-            total: item.subtotal || item.quantity * (variant.price || 0),
-            archived: order.archived || false,
-          });
-        });
-      });
-    });
-  });
-
-  setSalesData(formatted);
-};
+    setSalesData(formatted);
+  };
 
   useEffect(() => {
     fetchData();
     const channel = supabase
       .channel("orders-realtime")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "orders" }, fetchData)
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "orders" }, fetchData)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "raw_orders" },
+        fetchData
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "raw_orders" },
+        fetchData
+      )
       .subscribe();
 
     return () => {
@@ -143,6 +90,7 @@ const SalesData: React.FC<SalesDataProps> = () => {
   }, []);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value);
+
   const handleAddRecord = () => {
     if (userRole !== "Admin") return;
     navigate("/addrecord");
@@ -161,7 +109,7 @@ const SalesData: React.FC<SalesDataProps> = () => {
 
     const idsToArchive = Array.from(selectedRecords);
     const { error } = await supabase
-      .from("orders")
+      .from("raw_orders")
       .update({ archived: true })
       .in("id", idsToArchive);
 
@@ -316,7 +264,6 @@ const SalesData: React.FC<SalesDataProps> = () => {
                 <th>Item Size</th>
                 <th>Order Type</th>
                 <th>Quantity</th>
-                <th>Address</th>
                 <th>Medium</th>
                 <th>MOP</th>
                 <th>Total</th>
@@ -346,7 +293,6 @@ const SalesData: React.FC<SalesDataProps> = () => {
                     <td>{record.itemSize}</td>
                     <td>{record.orderType}</td>
                     <td>{record.quantity}</td>
-                    <td>{record.address}</td>
                     <td>{record.medium}</td>
                     <td>{record.mop}</td>
                     <td>₱ {record.total.toFixed(2)}</td>
