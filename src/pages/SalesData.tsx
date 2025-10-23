@@ -17,18 +17,13 @@ interface SalesRecord {
   itemSize: string;
   orderType: string;
   quantity: number;
-  address: string;
   medium: string;
   mop: string;
   total: number;
   archived?: boolean;
 }
 
-interface SalesDataProps {
-  onLogout?: () => void;
-}
-
-const SalesData: React.FC<SalesDataProps> = () => {
+const SalesData: React.FC = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [salesData, setSalesData] = useState<SalesRecord[]>([]);
@@ -36,20 +31,18 @@ const SalesData: React.FC<SalesDataProps> = () => {
   const userRole = localStorage.getItem("userRole");
 
   const fetchData = async () => {
-    // <CHANGE> Simplified query to fetch directly from flat raw_orders table
     const { data, error } = await supabase
       .from("raw_orders")
       .select("*")
       .order("date", { ascending: false });
 
     if (error) {
-      console.error("[v0] Supabase fetch error:", error);
+      console.error("Fetch error:", error);
       return;
     }
 
-    // <CHANGE> Direct mapping since raw_orders is already denormalized
     const formatted: SalesRecord[] = data.map((record: any) => ({
-      id: record.id,
+      id: String(record.raw_order_id),
       name: record.name || "Unknown",
       time: record.time || "",
       date: record.date || "",
@@ -58,7 +51,6 @@ const SalesData: React.FC<SalesDataProps> = () => {
       itemSize: record.item_size || "N/A",
       orderType: record.order_type || "N/A",
       quantity: record.quantity || 0,
-      address: record.address || "",
       medium: record.medium_y || "N/A",
       mop: record.mop_y || "N/A",
       total: record.total_amount || 0,
@@ -72,28 +64,38 @@ const SalesData: React.FC<SalesDataProps> = () => {
     fetchData();
     const channel = supabase
       .channel("orders-realtime")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "raw_orders" },
-        fetchData
-      )
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "raw_orders" },
-        fetchData
-      )
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "raw_orders" }, fetchData)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "raw_orders" }, fetchData)
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => supabase.removeChannel(channel);
   }, []);
 
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value);
+  const toggleRecordSelection = (id: string) => {
+    setSelectedRecords((prev) => {
+      const updated = new Set(prev);
+      if (updated.has(id)) updated.delete(id);
+      else updated.add(id);
+      return updated;
+    });
+  };
 
   const handleAddRecord = () => {
-    if (userRole !== "Admin") return;
-    navigate("/addrecord");
+    if (userRole === "Admin") navigate("/addrecord");
+  };
+
+  const handleEditRecord = () => {
+    if (userRole !== "Admin") {
+      alert("Only Admins can edit records.");
+      return;
+    }
+    if (selectedRecords.size === 1) {
+      const editId = Array.from(selectedRecords)[0];
+      const recordToEdit = salesData.find((r) => r.id === editId);
+      if (recordToEdit) navigate(`/editrecord/${editId}`, { state: { record: recordToEdit } });
+    } else {
+      alert("Please select exactly one record to edit.");
+    }
   };
 
   const handleArchiveRecord = async () => {
@@ -101,7 +103,6 @@ const SalesData: React.FC<SalesDataProps> = () => {
       alert("Only Admins can archive records.");
       return;
     }
-
     if (selectedRecords.size === 0) {
       alert("Please select at least one record to archive.");
       return;
@@ -111,7 +112,7 @@ const SalesData: React.FC<SalesDataProps> = () => {
     const { error } = await supabase
       .from("raw_orders")
       .update({ archived: true })
-      .in("id", idsToArchive);
+      .in("raw_order_id", idsToArchive);
 
     if (error) {
       console.error("Error archiving records:", error);
@@ -123,49 +124,13 @@ const SalesData: React.FC<SalesDataProps> = () => {
     }
   };
 
-  const handleEditRecord = () => {
-    if (userRole !== "Admin") {
-      alert("Only Admins can edit records.");
-      return;
-    }
-
-    if (selectedRecords.size === 1) {
-      const editId = selectedRecords.values().next().value;
-      const recordToEdit = salesData.find((record) => record.id === editId);
-      if (recordToEdit) navigate(`/editrecord/${editId}`, { state: { record: recordToEdit } });
-    } else {
-      alert("Please select exactly one record to edit.");
-    }
-  };
-
-  const toggleRecordSelection = (id: string) => {
-    setSelectedRecords((prev) => {
-      const updated = new Set(prev);
-      if (updated.has(id)) updated.delete(id);
-      else updated.add(id);
-      return updated;
-    });
-  };
-
   const filteredData = salesData
-    .filter((record) => !record.archived)
-    .filter((record) =>
-      Object.values(record).some((val) =>
-        String(val).toLowerCase().includes(searchTerm.toLowerCase())
+    .filter((r) => !r.archived)
+    .filter((r) =>
+      Object.values(r).some((v) =>
+        String(v).toLowerCase().includes(searchTerm.toLowerCase())
       )
     );
-
-  const numSelected = selectedRecords.size;
-  const rowCount = filteredData.length;
-
-  const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.checked) {
-      const newSelected = new Set(filteredData.map((r) => r.id));
-      setSelectedRecords(newSelected);
-      return;
-    }
-    setSelectedRecords(new Set());
-  };
 
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
@@ -176,9 +141,12 @@ const SalesData: React.FC<SalesDataProps> = () => {
             <h1 className="page-title">SALES DATA</h1>
           </div>
         </div>
+
         <Typography variant="caption" sx={{ color: "gray", fontSize: "14px", mb: 1, mt: 1 }}>
-          This contains a detailed list of all transactions. {userRole === "Admin" && "You can add, edit, or archive records as needed."}
+          This contains a detailed list of all transactions.
+          {userRole === "Admin" && " You can add, edit, or archive records as needed."}
         </Typography>
+
         <Divider />
 
         <div className="action-bar">
@@ -187,7 +155,7 @@ const SalesData: React.FC<SalesDataProps> = () => {
               type="text"
               placeholder="Search"
               value={searchTerm}
-              onChange={handleSearch}
+              onChange={(e) => setSearchTerm(e.target.value)}
               className="search-input"
             />
             <button className="sales-search-button">
@@ -199,39 +167,26 @@ const SalesData: React.FC<SalesDataProps> = () => {
             <div className="action-buttons">
               <Button
                 variant="outlined"
-                sx={{
-                  color: "black",
-                  border: "none",
-                  "&:hover": { backgroundColor: "#EC7A1C", color: "white" },
-                  padding: "8px 25px",
-                }}
+                sx={{ color: "black", border: "none", "&:hover": { backgroundColor: "#EC7A1C", color: "white" }, padding: "8px 25px" }}
                 onClick={handleAddRecord}
                 startIcon={<AddOutlined style={{ fontSize: 20 }} />}
               >
                 Add Record
               </Button>
+
               <Button
                 variant="outlined"
-                sx={{
-                  color: "black",
-                  border: "none",
-                  "&:hover": { backgroundColor: "#EC7A1C", color: "white" },
-                  padding: "8px 25px",
-                }}
+                sx={{ color: "black", border: "none", "&:hover": { backgroundColor: "#EC7A1C", color: "white" }, padding: "8px 25px" }}
                 onClick={handleArchiveRecord}
                 startIcon={<Inventory2Outlined style={{ fontSize: 20 }} />}
                 disabled={selectedRecords.size === 0}
               >
                 Archive Record
               </Button>
+
               <Button
                 variant="outlined"
-                sx={{
-                  color: "black",
-                  border: "none",
-                  "&:hover": { backgroundColor: "#EC7A1C", color: "white" },
-                  padding: "8px 25px",
-                }}
+                sx={{ color: "black", border: "none", "&:hover": { backgroundColor: "#EC7A1C", color: "white" }, padding: "8px 25px" }}
                 onClick={handleEditRecord}
                 startIcon={<EditOutlined style={{ fontSize: 20 }} />}
                 disabled={selectedRecords.size !== 1}
@@ -246,16 +201,7 @@ const SalesData: React.FC<SalesDataProps> = () => {
           <table className="sales-table">
             <thead>
               <tr>
-                {userRole === "Admin" && (
-                  <th>
-                    <Checkbox
-                      color="primary"
-                      indeterminate={numSelected > 0 && numSelected < rowCount}
-                      checked={rowCount > 0 && numSelected === rowCount}
-                      onChange={handleSelectAll}
-                    />
-                  </th>
-                )}
+                {userRole === "Admin" && <th>Select</th>}
                 <th>Name</th>
                 <th>Order Time</th>
                 <th>Order Date</th>
@@ -276,10 +222,7 @@ const SalesData: React.FC<SalesDataProps> = () => {
                     {userRole === "Admin" && (
                       <td>
                         <Checkbox
-                          sx={{
-                            color: "#9ca3af",
-                            "&.Mui-checked": { color: "#EC7A1C" },
-                          }}
+                          sx={{ color: "#9ca3af", "&.Mui-checked": { color: "#EC7A1C" } }}
                           checked={selectedRecords.has(record.id)}
                           onChange={() => toggleRecordSelection(record.id)}
                         />
@@ -300,9 +243,7 @@ const SalesData: React.FC<SalesDataProps> = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={13} style={{ textAlign: "center" }}>
-                    No records found
-                  </td>
+                  <td colSpan={12} style={{ textAlign: "center" }}>No records found</td>
                 </tr>
               )}
             </tbody>
