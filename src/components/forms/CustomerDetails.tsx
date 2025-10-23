@@ -107,6 +107,7 @@ export default function CustomerDetails({ data, onChange }: Props) {
             <MenuItem value="Viber">Viber</MenuItem>
             <MenuItem value="Hazel's Phone">Hazel's Phone</MenuItem>
             <MenuItem value="Enzo's Phone">Enzo's Phone</MenuItem>
+            <MenuItem value="Other">Other</MenuItem>
           </Select>
         </FormControl>
 
