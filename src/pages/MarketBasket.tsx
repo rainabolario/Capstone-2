@@ -1,6 +1,7 @@
 import React from "react";
 import Sidebar from "../components/Sidebar";
 import "../css/MarketBasket.css";
+import '../css/SalesOverview.css';
 import { Divider, Typography } from "@mui/material";
 
 interface MarketBasketProps {
@@ -23,12 +24,10 @@ const MarketBasket: React.FC<MarketBasketProps> = ({ currentUser, onLogout }) =>
           <Divider />
         </div>
 
-        <div className="div1">
-            <div className="div1-content">Total Sales</div>
+        <div className="tableau-responsive-wrapper">
             <iframe
                 src="https://prod-apsoutheast-b.online.tableau.com/t/iambeastar-ed66b6ed6a/views/KCSKITCHENDASHBOARD/ProductPerform?:embed=y&:toolbar=no"
-                width="1000"
-                height="800"
+                className="tableau-iframe"
                 frameBorder="0"
             ></iframe>
         </div>

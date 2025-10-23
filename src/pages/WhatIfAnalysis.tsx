@@ -24,12 +24,10 @@ const WhatIfAnalysis: React.FC<WhatIfAnalysisProps> = ({ currentUser, onLogout }
           <Divider />
         </div>
 
-        <div className="div1">
-            <div className="div1-content">Total Sales</div>
+        <div className="tableau-responsive-wrapper">
             <iframe
                 src="https://prod-apsoutheast-b.online.tableau.com/t/iambeastar-ed66b6ed6a/views/KCSKITCHENDASHBOARD/WhatIf?:embed=y&:toolbar=no"
-                width="1000"
-                height="800"
+                className="tableau-iframe"
                 frameBorder="0"
             ></iframe>
         </div>

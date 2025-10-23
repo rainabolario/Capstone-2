@@ -23,6 +23,7 @@
     display: flex;
     flex-direction: column;
     min-width: 0;
+    margin: 0px 20px;
 }
 
 .overview-header{
@@ -148,4 +149,20 @@
 
 .helper-text {
     margin: 0px 20px 10px 20px;
+}
+
+.tableau-responsive-wrapper {
+  position: relative;
+  width: 100%;
+  padding-top: 50%; 
+}
+
+.tableau-iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none; 
+  border-radius: 12px; 
 }
