@@ -53,12 +53,10 @@ const COMPLEX_CATEGORY_NAMES = ["PACKED MEAL"];
 const NO_SIZE_CATEGORIES = ["PACKED MEAL", "STREET FOOD GRAZING CART"];
 
 export default function OrderItems({ data, onChange }: Props) {
-  // State to hold data fetched from Supabase
   const [categories, setCategories] = useState<Category[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItemData[]>([]);
   const [categorySizes, setCategorySizes] = useState<CategorySize[]>([]);
 
-  // State for user selections
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
   const [selectedMenuItemId, setSelectedMenuItemId] = useState("");
   const [selectedSizeId, setSelectedSizeId] = useState("");
@@ -67,7 +65,6 @@ export default function OrderItems({ data, onChange }: Props) {
   const [isComplexCategory, setIsComplexCategory] = useState(false);
   const [customItemName, setCustomItemName] = useState("");
   const [customItemPrice, setCustomItemPrice] = useState(0);
-  
   const [hasSizes, setHasSizes] = useState(true);
 
   useEffect(() => {
@@ -86,77 +83,86 @@ export default function OrderItems({ data, onChange }: Props) {
       return;
     }
 
+    const selectedCategory = categories.find(
+      (c) => c.id === Number(selectedCategoryId)
+    );
+    const categoryName = selectedCategory?.name || "";
+
     if (!isComplexCategory) {
       const fetchMenuItems = async () => {
         const { data, error } = await supabase
           .from("menu_items")
           .select("id, name, category_id")
           .eq("category_id", selectedCategoryId);
-
         if (error) console.error("Error fetching menu items:", error);
         else setMenuItems(data || []);
       };
       fetchMenuItems();
     } else {
-      setMenuItems([]); 
+      setMenuItems([]);
     }
 
-    // Fetch category sizes
+    // ✅ Handle size logic
     if (hasSizes) {
-      const fetchCategorySizes = async () => {
-        // 1. Get all item IDs
-        const { data: items, error: itemsError } = await supabase
-          .from("menu_items")
-          .select("id")
-          .eq("category_id", selectedCategoryId);
+      if (categoryName === "FROZEN DELIGHT") {
+        // Directly set size options to Big and Small
+        setCategorySizes([
+          { id: 1, size: "BIG" },
+          { id: 2, size: "SMALL" },
+        ]);
+      } else {
+        // Otherwise, fetch from Supabase normally
+        const fetchCategorySizes = async () => {
+          const { data: items, error: itemsError } = await supabase
+            .from("menu_items")
+            .select("id")
+            .eq("category_id", selectedCategoryId);
 
-        if (itemsError) {
-          console.error("Error getting item IDs for sizes:", itemsError);
-          return;
-        }
-        const itemIds = items.map((i) => i.id);
+          if (itemsError) {
+            console.error("Error getting item IDs for sizes:", itemsError);
+            return;
+          }
+          const itemIds = items.map((i) => i.id);
 
-        // 2. Get all variants
-        const { data: variants, error: variantsError } = await supabase
-          .from("menu_item_variants")
-          .select("size_id")
-          .in("menu_item_id", itemIds);
+          const { data: variants, error: variantsError } = await supabase
+            .from("menu_item_variants")
+            .select("size_id")
+            .in("menu_item_id", itemIds);
 
-        if (variantsError) {
-          console.error("Error getting variants for sizes:", variantsError);
-          return;
-        }
+          if (variantsError) {
+            console.error("Error getting variants for sizes:", variantsError);
+            return;
+          }
 
-        // 3. Get unique size IDs, filtering out NULLs
-        const uniqueSizeIds = [
-          ...new Set(variants.map((v) => v.size_id).filter((id) => id !== null)),
-        ];
+          const uniqueSizeIds = [
+            ...new Set(
+              variants.map((v) => v.size_id).filter((id) => id !== null)
+            ),
+          ];
 
-        // 4. Fetch size details
-        const { data: sizes, error: sizesError } = await supabase
-          .from("category_sizes")
-          .select("id, size")
-          .in("id", uniqueSizeIds);
+          const { data: sizes, error: sizesError } = await supabase
+            .from("category_sizes")
+            .select("id, size")
+            .in("id", uniqueSizeIds);
 
-        if (sizesError) {
-          console.error("Error fetching size details:", sizesError);
-        } else {
-          const validSizes = (sizes || []).filter(
-            (size) => size.size !== null && size.size !== "NULL"
-          );
-          setCategorySizes(validSizes);
-        }
-      };
-      fetchCategorySizes();
+          if (sizesError) {
+            console.error("Error fetching size details:", sizesError);
+          } else {
+            const validSizes = (sizes || []).filter(
+              (size) => size.size !== null && size.size !== "NULL"
+            );
+            setCategorySizes(validSizes);
+          }
+        };
+        fetchCategorySizes();
+      }
     } else {
-      setCategorySizes([]); 
+      setCategorySizes([]);
     }
-  }, [selectedCategoryId, isComplexCategory, hasSizes]); 
+  }, [selectedCategoryId, isComplexCategory, hasSizes, categories]);
 
   const handleAdd = () => {
-    // Find the selected category object
     const category = categories.find((c) => c.id === Number(selectedCategoryId));
-
     if (!category) {
       alert("Please select a category.");
       return;
@@ -165,14 +171,12 @@ export default function OrderItems({ data, onChange }: Props) {
       alert("Quantity must be at least 1.");
       return;
     }
-
     if (customItemPrice <= 0) {
       alert("Please enter a price greater than 0.");
       return;
     }
 
     let newItem: OrderItem;
-
     if (isComplexCategory) {
       if (!customItemName) {
         alert("Please enter an item name.");
@@ -188,15 +192,12 @@ export default function OrderItems({ data, onChange }: Props) {
       };
     } else {
       const menuItem = menuItems.find((i) => i.id === Number(selectedMenuItemId));
-
       if (!menuItem) {
         alert("Please fill in all required fields: Item Name.");
         return;
       }
 
       let sizeName = "N/A";
-
-      // Only check for size if the category is supposed to have them
       if (hasSizes) {
         const size = categorySizes.find((s) => s.id === Number(selectedSizeId));
         if (!size) {
@@ -206,19 +207,16 @@ export default function OrderItems({ data, onChange }: Props) {
         sizeName = size.size;
       }
 
-      // Build the OrderItem object
       newItem = {
         category: category.name,
         name: menuItem.name,
-        size: sizeName, 
+        size: sizeName,
         qty: selectedQty,
         price: customItemPrice,
       };
     }
 
     onChange([...data, newItem]);
-
-    // Reset form by clearing selections
     setSelectedCategoryId("");
     setSelectedMenuItemId("");
     setSelectedSizeId("");
@@ -226,7 +224,7 @@ export default function OrderItems({ data, onChange }: Props) {
     setCustomItemName("");
     setCustomItemPrice(0);
     setIsComplexCategory(false);
-    setHasSizes(true); 
+    setHasSizes(true);
     setMenuItems([]);
     setCategorySizes([]);
   };
@@ -235,7 +233,6 @@ export default function OrderItems({ data, onChange }: Props) {
     const categoryId = e.target.value;
     const category = categories.find((c) => c.id === Number(categoryId));
 
-    // Reset all fields
     setSelectedCategoryId(categoryId);
     setSelectedMenuItemId("");
     setSelectedSizeId("");
@@ -243,14 +240,12 @@ export default function OrderItems({ data, onChange }: Props) {
     setCustomItemPrice(0);
     setSelectedQty(1);
 
-    // Check if it's a complex (text input) category
     if (category && COMPLEX_CATEGORY_NAMES.includes(category.name)) {
       setIsComplexCategory(true);
     } else {
       setIsComplexCategory(false);
     }
-    
-    // Check if the category has sizes
+
     if (category && NO_SIZE_CATEGORIES.includes(category.name)) {
       setHasSizes(false);
     } else {
@@ -262,7 +257,6 @@ export default function OrderItems({ data, onChange }: Props) {
     setSelectedMenuItemId(e.target.value);
   };
 
-  // Handle remove item from list
   const handleRemove = (indexToRemove: number) => {
     const newData = data.filter((_, idx) => idx !== indexToRemove);
     onChange(newData);
@@ -278,7 +272,6 @@ export default function OrderItems({ data, onChange }: Props) {
       <Divider sx={{ mb: 3 }} />
 
       <div className="order-item-fields">
-        {/* --- Input Section --- */}
         <div className="order-items-content">
           {/* Category */}
           <FormControl fullWidth sx={{ mb: 2 }}>
@@ -291,9 +284,8 @@ export default function OrderItems({ data, onChange }: Props) {
               onChange={handleCategoryChange}
               displayEmpty
               renderValue={(selected) => {
-                if (!selected) {
+                if (!selected)
                   return <span style={{ color: "#9e9e9e" }}>Select category</span>;
-                }
                 const categoryName = categories.find(
                   (c) => c.id === Number(selected)
                 )?.name;
@@ -329,9 +321,8 @@ export default function OrderItems({ data, onChange }: Props) {
                 disabled={!selectedCategoryId}
                 displayEmpty
                 renderValue={(selected) => {
-                  if (!selected) {
+                  if (!selected)
                     return <span style={{ color: "#9e9e9e" }}>Select item</span>;
-                  }
                   const itemName = menuItems.find(
                     (i) => i.id === Number(selected)
                   )?.name;
@@ -413,7 +404,6 @@ export default function OrderItems({ data, onChange }: Props) {
 
         <Divider orientation="vertical" flexItem />
 
-        {/* Order List */}
         <div className="order-items-list">
           <h4>Order List</h4>
           {data.length === 0 && (
