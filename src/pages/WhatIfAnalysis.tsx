@@ -24,41 +24,14 @@ const WhatIfAnalysis: React.FC<WhatIfAnalysisProps> = ({ currentUser, onLogout }
           <Divider />
         </div>
 
-        <div className="whatif-sales-header">
-          <h2>Sales Projections</h2>
-        </div>
-
-
-        <div className="whatif-grid">
-          {/* Price Increase */}
-          <div className="whatif-div1">
-            <div className="whatif-content1">Price Increase</div>
-            <div className="placeholder">Placeholder (Sales Projection)</div>
-          </div>
-
-          {/* Product Demand */}
-          <div className="whatif-div2">
-            <div className="whatif-content2">Product Demand</div>
-            <div className="placeholder">Placeholder (Sales Projection)</div>
-          </div>
-
-          {/* What-If Parameter */}
-          <div className="whatif-div3">
-            <div className="whatif-content3">What-If Parameter</div>
-            <div className="placeholder">Placeholder (Sliders)</div>
-          </div>
-
-          {/* Recommendation */}
-          <div className="whatif-div4">
-            <div className="whatif-content4">Recommendation</div>
-            <div className="placeholder">Placeholder (Text)</div>
-          </div>
-
-          {/* Sales Impact Chart */}
-          <div className="whatif-div5">
-            <div className="whatif-content5">Sales Impact of Parameter Change</div>
-            <div className="placeholder">Chart Placeholder</div>
-          </div>
+        <div className="div1">
+            <div className="div1-content">Total Sales</div>
+            <iframe
+                src="https://prod-apsoutheast-b.online.tableau.com/t/iambeastar-ed66b6ed6a/views/KCSKITCHENDASHBOARD/WhatIf?:embed=y&:toolbar=no"
+                width="1000"
+                height="800"
+                frameBorder="0"
+            ></iframe>
         </div>
       </div>
     </div>
