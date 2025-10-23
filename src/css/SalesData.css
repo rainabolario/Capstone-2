@@ -122,12 +122,13 @@
   background-color: white;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
-  overflow-x: auto;        
-  overflow-y: hidden;
+  overflow-x: auto;
+  overflow-y: auto;       /* Enable vertical scrolling */
+  max-height: 600px;      /* Adjust height as needed */
   margin-bottom: 24px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  scrollbar-color: #ec7a1c #f9f9fa; 
-  scrollbar-width: thin;
+  scrollbar-width: none;  
+  -ms-overflow-style: none; 
 }
 
 .sales-table {

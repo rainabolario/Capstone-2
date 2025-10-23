@@ -54,7 +54,7 @@ const SalesData: React.FC = () => {
       medium: record.medium_y || "N/A",
       mop: record.mop_y || "N/A",
       total: record.total_amount || 0,
-      archived: record.archived || false,
+      archived: record.is_active === false,
     }));
 
     setSalesData(formatted);
@@ -111,7 +111,7 @@ const SalesData: React.FC = () => {
     const idsToArchive = Array.from(selectedRecords);
     const { error } = await supabase
       .from("raw_orders")
-      .update({ archived: true })
+      .update({ is_active: false })
       .in("raw_order_id", idsToArchive);
 
     if (error) {
