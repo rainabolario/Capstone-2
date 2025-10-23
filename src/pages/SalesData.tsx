@@ -31,32 +31,31 @@ const SalesData: React.FC = () => {
   const userRole = localStorage.getItem("userRole");
 
   const fetchData = async () => {
-  
   const { data, error } = await supabase
-    .from("sales_data_view") // <-- view instead of raw_orders
-    .select("*")
-    .order("date", { ascending: false });
+      .from("raw_orders")
+      .select("*")
+      .order("date", { ascending: false });
 
-  if (error) {
-    console.error("Fetch error:", error);
-    return;
-  }
+        if (error) {
+      console.error("Fetch error:", error);
+      return;
+    }
 
   const formatted: SalesRecord[] = data.map((record: any) => ({
-    id: String(record.raw_order_id),
-    name: record.name || "NULL",
-    time: record.time || "NULL",
-    date: record.date || "NULL",
-    day: record.day || "NULL",
-    item: record.item || "NULL",
-    itemSize: record.item_size || "NULL",
-    orderType: record.order_type || "NULL",
-    quantity: record.quantity ?? 0,
-    medium: record.medium || "NULL",
-    mop: record.mop || "NULL",
-    total: record.total ?? 0,
-    archived: record.archived || false,
-  }));
+      id: String(record.raw_order_id),
+      name: record.name || "Unknown",
+      time: record.time || "",
+      date: record.date || "",
+      day: record.day || "",
+      item: record.item || "N/A",
+      itemSize: record.item_size || "N/A",
+      orderType: record.order_type || "N/A",
+      quantity: record.quantity || 0,
+      medium: record.medium_y || "N/A",
+      mop: record.mop_y || "N/A",
+      total: record.total_amount || 0,
+      archived: record.is_active === false,
+    }));
 
   setSalesData(formatted);
 };

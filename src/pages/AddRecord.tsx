@@ -107,7 +107,7 @@ export default function AddRecord({ onLogout }: AddRecordProps) {
           day: formData.customer.date ? formData.customer.date.format("dddd") : null,
           item: item.name,
           item_size: item.size,
-          order_type: formData.customer.orderMode,
+          order_type: item.category,
           quantity: item.qty,
           medium_y: formData.customer.orderMode,
           mop_y: formData.customer.paymentMode,
