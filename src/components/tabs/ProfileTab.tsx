@@ -1,22 +1,26 @@
-import type React from "react"
-import WarningAmberRoundedIcon from '@mui/icons-material/WarningAmberRounded';
+import * as React from "react";
+import { useState } from "react";
+import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
 import { TextField, Select, MenuItem } from "@mui/material";
+import { supabase } from "../../supabaseClient";
+
 
 interface User {
-  id: string
-  name: string
-  email: string 
-  role: string
+  id: string;
+  name: string;
+  email: string;
+  role: string;
 }
 
 interface ProfileTabProps {
-  user: User | null
-  isEditing: boolean
-  loading: boolean
-  setUser: React.Dispatch<React.SetStateAction<User | null>>
-  setIsEditing: React.Dispatch<React.SetStateAction<boolean>>
-  saveProfile: () => Promise<void>
-  cancelEdit: () => void
+  user: User | null;
+  isEditing: boolean;
+  loading: boolean;
+  setUser: React.Dispatch<React.SetStateAction<User | null>>;
+  setIsEditing: React.Dispatch<React.SetStateAction<boolean>>;
+  saveProfile: () => Promise<void>;
+  cancelEdit: () => void;
+  setUsers?: React.Dispatch<React.SetStateAction<User[]>>; // optional if you keep list
 }
 
 const ProfileTab: React.FC<ProfileTabProps> = ({
@@ -26,139 +30,152 @@ const ProfileTab: React.FC<ProfileTabProps> = ({
   setUser,
   setIsEditing,
   saveProfile,
-  cancelEdit
+  cancelEdit,
 }) => {
+  const [confirmEmail, setConfirmEmail] = useState("");
+  const [confirmText, setConfirmText] = useState("");
+  const [deactivating, setDeactivating] = useState(false);
+
+  // ✅ Uses Supabase logic instead of /api endpoint
+  const deactivateAccount = async () => {
+    if (!user) {
+      alert("No user found.");
+      return;
+    }
+
+    if (confirmEmail !== user.email || confirmText.toUpperCase() !== "DEACTIVATE") {
+      alert("Please type your email and 'DEACTIVATE' correctly to confirm.");
+      return;
+    }
+
+    const confirmDeactivate = window.confirm(
+      "Are you sure you want to deactivate your account? You will be logged out immediately."
+    );
+    if (!confirmDeactivate) return;
+
+    try {
+      setDeactivating(true);
+
+      const { error } = await supabase
+        .from("users")
+        .update({ is_active: false })
+        .eq("id", user.id);
+
+      if (error) throw error;
+
+      alert("Account deactivated successfully. Logging out...");
+
+      // Clear session
+      localStorage.removeItem("token");
+      sessionStorage.clear();
+      setUser(null);
+      await supabase.auth.signOut();
+
+      window.location.href = "/login";
+    } catch (err) {
+      console.error("Error deactivating user:", err);
+      alert("Failed to deactivate account.");
+    } finally {
+      setDeactivating(false);
+    }
+  };
+
   return (
-    <>
+    <div>
       <div className="profile-container">
         <h2>Profile Information</h2>
 
-        {user && (
-        <div className="profile-content">
-          <div className="name-container">
-            <TextField
-              fullWidth
-              type="text"
-              label="Name"
-              placeholder="Enter your name"
-              value={user?.name || ""}
-              disabled={!isEditing}
-              onChange={e => setUser(prev => prev ? { ...prev, name: e.target.value } : prev)}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '10px'
+        {user ? (
+          <div className="profile-content">
+            <div className="name-container">
+              <TextField
+                fullWidth
+                label="Name"
+                value={user.name || ""}
+                disabled={!isEditing}
+                onChange={(e) =>
+                  setUser((prev) => (prev ? { ...prev, name: e.target.value } : prev))
                 }
-              }}
-            />
-          </div>
-          <div className="email-role-wrapper">
-          <div className="email-container">
-            <TextField
-              fullWidth 
-              type="email"
-              label="Email"
-              placeholder="your@email.com"
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '10px'
+              />
+            </div>
+
+            <div className="email-role-wrapper">
+              <TextField
+                fullWidth
+                label="Email"
+                value={user.email || ""}
+                disabled={!isEditing}
+                onChange={(e) =>
+                  setUser((prev) => (prev ? { ...prev, email: e.target.value } : prev))
                 }
-              }}
-              value={user?.email || ""}
-              disabled={!isEditing}
-              onChange={e => setUser(prev => prev ? { ...prev, email: e.target.value } : prev)}
-            />
-          </div>
-          <div className="role-container">
-            <Select
-              fullWidth
-              name="role" 
-              id="role"
-              value={user?.role || ""}
-              disabled={!isEditing}
-              onChange={e => setUser(prev => prev ? { ...prev, role: e.target.value } : prev)}
-              sx={{
-                '& .MuiSelect-root': {
-                  borderRadius: '10px'
+              />
+
+              <Select
+                fullWidth
+                value={user.role || ""}
+                disabled={!isEditing}
+                onChange={(e) =>
+                  setUser((prev) => (prev ? { ...prev, role: e.target.value } : prev))
                 }
-              }}
-            >
-              <MenuItem value="None">Select a Role</MenuItem>
-              <MenuItem value="Admin">Admin</MenuItem>
-              <MenuItem value="Staff">Staff</MenuItem>
-            </Select>
+              >
+                <MenuItem value="">Select a Role</MenuItem>
+                <MenuItem value="Admin">Admin</MenuItem>
+                <MenuItem value="Staff">Staff</MenuItem>
+              </Select>
+            </div>
           </div>
-          </div>
-        </div>
+        ) : (
+          <p>Loading user data...</p>
         )}
 
         <div className="button-content">
           {isEditing ? (
             <>
-              <button
-                className="edit-button"
-                onClick={saveProfile}
-                disabled={loading}
-              >
+              <button onClick={saveProfile} disabled={loading}>
                 {loading ? "Saving..." : "Save Changes"}
               </button>
-              <button
-                className="delete-button"
-                onClick={cancelEdit}
-                disabled={loading}
-              >
+              <button onClick={cancelEdit} disabled={loading}>
                 Cancel
               </button>
             </>
           ) : (
-            <button className="edit-button" onClick={() => setIsEditing(true)}>
-              Edit
-            </button>
+            <button onClick={() => setIsEditing(true)}>Edit</button>
           )}
         </div>
       </div>
 
       <div className="delete-container">
-        <h2>Delete Account</h2>
+        <h2>Deactivate Account</h2>
         <div className="delete-instructions">
-          <WarningAmberRoundedIcon sx={{ height: 24 }}/>
-          <p>Once you delete your account, there is no going back. Please be certain.</p>
+          <WarningAmberRoundedIcon sx={{ height: 24 }} />
+          <p>Once you deactivate your account, you’ll be logged out immediately. No reactivation.</p>
         </div>
+
         <div className="delete-content">
-          <div className="type-email-container">
-            <TextField
-              fullWidth 
-              type="email" 
-              label="To confirm, type your email in the box below"
-              placeholder="your@email.com" 
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '10px'
-                }
-              }}
-              InputLabelProps={{ shrink: true }}
-            />
-          </div>
-          <div className="type-delete-container">
-            <TextField 
-              fullWidth 
-              type="text" 
-              label="To confirm, type 'DELETE' in the box below"
-              placeholder="delete" 
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '10px'
-                }
-              }}
-              InputLabelProps={{ shrink: true }}
-            />
-          </div>
+          <TextField
+            fullWidth
+            type="email"
+            label="Type your email to confirm"
+            value={confirmEmail}
+            onChange={(e) => setConfirmEmail(e.target.value)}
+          />
+          <TextField
+            fullWidth
+            type="text"
+            label="Type 'DEACTIVATE' to confirm"
+            value={confirmText}
+            onChange={(e) => setConfirmText(e.target.value)}
+          />
         </div>
+
         <div className="button-content">
-          <button className="delete-button">Delete Account</button>
+          <button onClick={deactivateAccount} disabled={deactivating}>
+            {deactivating ? "Deactivating..." : "Deactivate Account"}
+          </button>
         </div>
       </div>
-    </>
-  )
-}
+    </div>
+  );
+};
 
-export default ProfileTab
+export default ProfileTab;
