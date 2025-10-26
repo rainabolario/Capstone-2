@@ -169,7 +169,11 @@ const ArchivedData: React.FC = () => {
                 <tr>
                   <th>
                     <Checkbox
-                      color="primary"
+                      sx={{ 
+                        color: "#9ca3af", 
+                        "&.Mui-checked": { color: "white" } 
+                        , "&.MuiCheckbox-indeterminate": { color: "white" } 
+                      }}
                       indeterminate={selectedIds.length > 0 && selectedIds.length < filteredData.length}
                       checked={selectedIds.length === filteredData.length && filteredData.length > 0}
                       onChange={(e) =>

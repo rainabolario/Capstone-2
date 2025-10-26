@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Button,
@@ -14,6 +14,7 @@ import {
   Typography,
   IconButton,
 } from "@mui/material";
+import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
 import type { SelectChangeEvent } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -63,7 +64,7 @@ export default function OrderItems({ data, onChange }: Props) {
   const [selectedQty, setSelectedQty] = useState(1);
 
   const [isComplexCategory, setIsComplexCategory] = useState(false);
-  const [customItemName, setCustomItemName] = useState("");
+  const [complexItemParts, setComplexItemParts] = useState<string[]>(["", ""]);
   const [customItemPrice, setCustomItemPrice] = useState(0);
   const [hasSizes, setHasSizes] = useState(true);
 
@@ -161,6 +162,30 @@ export default function OrderItems({ data, onChange }: Props) {
     }
   }, [selectedCategoryId, isComplexCategory, hasSizes, categories]);
 
+  const handleComplexItemChange = (index: number, value: string) => {
+    const newParts = [...complexItemParts];
+    newParts[index] = value.toUpperCase();
+    setComplexItemParts(newParts);
+  };
+
+  const addComplexItemField = () => {
+    setComplexItemParts([...complexItemParts, ""]);
+  };
+
+  const removeComplexItemField = (indexToRemove: number) => {
+    // Only allow removing fields if there are more than 2
+    if (complexItemParts.length <= 2) return;
+    const newParts = complexItemParts.filter(
+      (_, index) => index !== indexToRemove
+    );
+    setComplexItemParts(newParts);
+  };
+
+  const joinedComplexName = complexItemParts
+    .map((p) => p.trim()) // Get rid of whitespace
+    .filter((p) => p) // Filter out empty strings
+    .join(" + "); 
+
   const handleAdd = () => {
     const category = categories.find((c) => c.id === Number(selectedCategoryId));
     if (!category) {
@@ -178,14 +203,14 @@ export default function OrderItems({ data, onChange }: Props) {
 
     let newItem: OrderItem;
     if (isComplexCategory) {
-      if (!customItemName) {
+      if (!joinedComplexName) {
         alert("Please enter an item name.");
         return;
       }
 
       newItem = {
         category: category.name,
-        name: customItemName,
+        name: joinedComplexName,
         size: "N/A",
         qty: selectedQty,
         price: customItemPrice,
@@ -221,7 +246,7 @@ export default function OrderItems({ data, onChange }: Props) {
     setSelectedMenuItemId("");
     setSelectedSizeId("");
     setSelectedQty(1);
-    setCustomItemName("");
+    setComplexItemParts(["", ""]);
     setCustomItemPrice(0);
     setIsComplexCategory(false);
     setHasSizes(true);
@@ -236,7 +261,7 @@ export default function OrderItems({ data, onChange }: Props) {
     setSelectedCategoryId(categoryId);
     setSelectedMenuItemId("");
     setSelectedSizeId("");
-    setCustomItemName("");
+    setComplexItemParts(["", ""]);
     setCustomItemPrice(0);
     setSelectedQty(1);
 
@@ -264,7 +289,7 @@ export default function OrderItems({ data, onChange }: Props) {
 
   const isNormalFlowInvalid =
     !selectedMenuItemId || (hasSizes && !selectedSizeId) || customItemPrice <= 0;
-  const isComplexFlowInvalid = !customItemName || customItemPrice <= 0;
+  const isComplexFlowInvalid = !joinedComplexName || customItemPrice <= 0;
 
   return (
     <div className="order-items-container">
@@ -301,14 +326,54 @@ export default function OrderItems({ data, onChange }: Props) {
           </FormControl>
 
           {isComplexCategory ? (
-            <TextField
-              label="Item Name"
-              value={customItemName}
-              onChange={(e) => setCustomItemName(e.target.value.toUpperCase())}
-              fullWidth
-              sx={{ mb: 2 }}
-              InputLabelProps={{ shrink: true }}
-            />
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1, mb: 2 }}>
+              {complexItemParts.map((part, index) => (
+                <Box
+                  key={index}
+                  sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                >
+                  <TextField
+                    label={`Item ${index + 1}`}
+                    value={part}
+                    onChange={(e) =>
+                      handleComplexItemChange(index, e.target.value)
+                    }
+                    fullWidth
+                    InputLabelProps={{ shrink: true }}
+                    sx={{
+                      mb: 1
+                    }}
+                  />
+                  {index > 1 && (
+                    <IconButton
+                      onClick={() => removeComplexItemField(index)}
+                      size="small"
+                      aria-label="remove item part"
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  )}
+                </Box>
+              ))}
+              <Button
+                onClick={addComplexItemField}
+                startIcon={<AddIcon />}
+                variant="outlined"
+                sx={{
+                  alignSelf: "flex-start",
+                  color: "#ec7a1c",
+                  borderColor: "#ec7a1c",
+                  padding: '6px 16px', 
+                    "&:hover": { 
+                      backgroundColor: "#ec7a1c",
+                      color: "white",
+                      borderColor: "#ec7a1c",
+                    },
+                 }}
+              >
+                Meal Item
+              </Button>
+            </Box>
           ) : (
             <FormControl fullWidth sx={{ mb: 2 }}>
               <InputLabel id="name-label" shrink>
@@ -387,18 +452,35 @@ export default function OrderItems({ data, onChange }: Props) {
               inputProps={{ min: 0 }}
               disabled={!selectedCategoryId}
             />
-            <Button
-              variant="outlined"
-              startIcon={<AddIcon />}
-              onClick={handleAdd}
-              sx={{ borderColor: "#EC7A1C", color: "#EC7A1C" }}
-              disabled={
+            {(() => {
+              const isButtonDisabled =
                 !selectedCategoryId ||
-                (isComplexCategory ? isComplexFlowInvalid : isNormalFlowInvalid)
-              }
-            >
-              Add Another Order
-            </Button>
+                (isComplexCategory ? isComplexFlowInvalid : isNormalFlowInvalid);
+
+              return (
+                <Button
+                  variant={isButtonDisabled ? "outlined" : "contained"}
+                  startIcon={<AddShoppingCartIcon />}
+                  onClick={handleAdd}
+                  sx={
+                    isButtonDisabled
+                      ? { 
+                          borderColor: 'rgba(0, 0, 0, 0.26)',
+                          color: 'rgba(0, 0, 0, 0.26)'
+                        } 
+                      : {
+                          backgroundColor: "#EC7A1C",
+                          "&:hover": {
+                            backgroundColor: "#d66c10",
+                          },
+                        }
+                  }
+                  disabled={isButtonDisabled}
+                >
+                  {data.length === 0 ? "Add To Cart" : "Add Another Item"}
+                </Button>
+              );
+            })()}
           </div>
         </div>
 

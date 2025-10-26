@@ -132,6 +132,17 @@ const SalesData: React.FC = () => {
       )
     );
 
+  const numSelected = selectedRecords.size;
+  const rowCount = filteredData.length;
+
+  const handleSelectAllClick = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.checked) {
+      const newSelecteds = new Set(filteredData.map((r) => r.id));
+      setSelectedRecords(newSelecteds);
+      return;
+    }
+    setSelectedRecords(new Set());
+  };
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
       <Sidebar />
@@ -201,7 +212,21 @@ const SalesData: React.FC = () => {
           <table className="sales-table">
             <thead>
               <tr>
-                {userRole === "Admin" && <th>Select</th>}
+                {userRole === "Admin" && (
+                  <th>
+                    <Checkbox
+                      sx={{ 
+                        color: "#9ca3af", 
+                        "&.Mui-checked": { color: "white" } 
+                        , "&.MuiCheckbox-indeterminate": { color: "white" } 
+                      }}
+                      indeterminate={numSelected > 0 && numSelected < rowCount}
+                      checked={rowCount > 0 && numSelected === rowCount}
+                      onChange={handleSelectAllClick}
+                      inputProps={{ "aria-label": "select all records" }}
+                    />
+                  </th>
+                )}
                 <th>Name</th>
                 <th>Order Time</th>
                 <th>Order Date</th>
