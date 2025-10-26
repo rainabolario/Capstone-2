@@ -10,30 +10,31 @@ import Register from "./Register";
 import EditUserModal from "./EditAccount";
 import { supabase } from "../supabaseClient";
 
-
 interface User {
-  id: string | number;
+  id: string;
   name: string;
   email: string;
   role: "Admin" | "Staff" | string;
+  is_active?: boolean;
 }
 
 const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedUsers, setSelectedUsers] = useState<Set<string | number>>(new Set());
+  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
   const [openRegister, setOpenRegister] = useState(false);
   const [openEditModal, setOpenEditModal] = useState(false);
   const [userToEdit, setUserToEdit] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // ✅ Fetch users from Supabase
+  // ✅ Fetch only active users from Supabase
   const fetchUsers = async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
         .from("users")
         .select("*")
+        .eq("is_active", true) // ✅ Only fetch active users
         .order("name", { ascending: true });
 
       if (error) {
@@ -54,13 +55,15 @@ const UserManagement: React.FC = () => {
 
   const filteredUsers = users.filter(
     (u) =>
-      u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.email?.toLowerCase().includes(searchTerm.toLowerCase())
+      (u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        u.email?.toLowerCase().includes(searchTerm.toLowerCase())) &&
+      u.is_active !== false // ✅ Hide deactivated users
   );
 
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value);
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) =>
+    setSearchTerm(e.target.value);
 
-  const handleSelectUser = (id: string | number) => {
+  const handleSelectUser = (id: string) => {
     setSelectedUsers((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(id)) newSet.delete(id);
@@ -70,7 +73,8 @@ const UserManagement: React.FC = () => {
   };
 
   const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.checked) setSelectedUsers(new Set(filteredUsers.map((u) => u.id)));
+    if (event.target.checked)
+      setSelectedUsers(new Set(filteredUsers.map((u) => u.id)));
     else setSelectedUsers(new Set());
   };
 
@@ -84,35 +88,43 @@ const UserManagement: React.FC = () => {
   };
 
   const handleUpdateUser = (updatedUser: User) => {
-    setUsers((prev) => prev.map((u) => (u.id === updatedUser.id ? updatedUser : u)));
+    setUsers((prev) =>
+      prev.map((u) => (u.id === updatedUser.id ? updatedUser : u))
+    );
     setOpenEditModal(false);
     setUserToEdit(null);
     setSelectedUsers(new Set());
   };
 
-  // Optional delete function (for later use)
- const handleDeleteUser = async () => {
-  if (selectedUsers.size === 0) return;
+  // ✅ Deactivate user(s)
+  const handleDeactivateUser = async () => {
+    if (selectedUsers.size === 0) return;
 
-  const confirmDelete = window.confirm("Are you sure you want to delete the selected user(s)?");
-  if (!confirmDelete) return;
+    const confirmDeactivate = window.confirm(
+      "Are you sure you want to deactivate the selected user(s)?"
+    );
+    if (!confirmDeactivate) return;
 
-  const ids = Array.from(selectedUsers);
+    const idsToDeactivate = Array.from(selectedUsers);
 
-  try {
-    // Delete from Supabase
-    const { error } = await supabase.from("users").delete().in("id", ids);
-    if (error) throw error;
+    try {
+      const { error } = await supabase
+        .from("users")
+        .update({ is_active: false })
+        .in("id", idsToDeactivate);
 
-    // Remove deleted users from local state
-    setUsers((prev) => prev.filter((u) => !ids.includes(u.id)));
-    setSelectedUsers(new Set());
-    alert("User(s) deleted successfully!");
-  } catch (err) {
-    console.error("Error deleting users:", err);
-    alert("Failed to delete user(s).");
-  }
-};
+      if (error) throw error;
+
+      // ✅ Update local state (remove deactivated users)
+      setUsers((prev) => prev.filter((u) => !idsToDeactivate.includes(u.id)));
+
+      setSelectedUsers(new Set());
+      alert("User(s) deactivated successfully!");
+    } catch (err) {
+      console.error("Error deactivating users:", err);
+      alert("Failed to deactivate user(s).");
+    }
+  };
 
   return (
     <div className="user-management-container">
@@ -121,11 +133,18 @@ const UserManagement: React.FC = () => {
         <div className="header-section">
           <h2>USER MANAGEMENT</h2>
         </div>
-        <Typography variant="caption" sx={{ color: "gray", fontSize: 14, mb: 1, mt: 1 }}>
-          Manage all user profiles here. You can add, edit, or delete users as needed.
+
+        <Typography
+          variant="caption"
+          sx={{ color: "gray", fontSize: 14, mb: 1, mt: 1 }}
+        >
+          Manage all user profiles here. You can add, edit, or deactivate users
+          as needed.
         </Typography>
+
         <Divider />
 
+        {/* 🔍 Search + Buttons */}
         <div className="action-bar">
           <div className="search-container">
             <input
@@ -180,13 +199,14 @@ const UserManagement: React.FC = () => {
               }}
               disabled={selectedUsers.size === 0}
               startIcon={<DeleteIcon />}
-              onClick={handleDeleteUser}
+              onClick={handleDeactivateUser}
             >
-              Delete User
+              Deactivate User
             </Button>
           </div>
         </div>
 
+        {/* 🧾 User Table */}
         <div className="users-table-container">
           {loading ? (
             <Typography sx={{ mt: 2 }}>Loading users...</Typography>
@@ -200,7 +220,8 @@ const UserManagement: React.FC = () => {
                     <Checkbox
                       color="primary"
                       indeterminate={
-                        selectedUsers.size > 0 && selectedUsers.size < filteredUsers.length
+                        selectedUsers.size > 0 &&
+                        selectedUsers.size < filteredUsers.length
                       }
                       checked={
                         filteredUsers.length > 0 &&

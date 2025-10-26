@@ -69,6 +69,7 @@ const Register: React.FC<RegisterProps> = ({ onClose }) => {
             email,
             role,
             password: hashedPassword, // store hashed password
+            is_active: true,
           },
         ]);
 
