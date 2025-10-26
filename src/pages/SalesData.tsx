@@ -63,13 +63,16 @@ const SalesData: React.FC = () => {
   useEffect(() => {
     fetchData();
     const channel = supabase
-      .channel("orders-realtime")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "raw_orders" }, fetchData)
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "raw_orders" }, fetchData)
-      .subscribe();
+    .channel("orders-realtime")
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "raw_orders" }, fetchData)
+    .on("postgres_changes", { event: "UPDATE", schema: "public", table: "raw_orders" }, fetchData)
+    // listen for broadcast from Archived page
+    .on("broadcast", { event: "refresh_sales_data" }, fetchData)
+    .subscribe();
 
-    return () => supabase.removeChannel(channel);
-  }, []);
+  return () => supabase.removeChannel(channel);
+}, []);
+
 
   const toggleRecordSelection = (id: string) => {
     setSelectedRecords((prev) => {

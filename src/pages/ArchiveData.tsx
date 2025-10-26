@@ -95,9 +95,15 @@ const ArchivedData: React.FC = () => {
     } else {
       alert("Records restored successfully!");
       setSelectedIds([]);
-      fetchArchived();
+      await fetchArchived();
+
+      await supabase.channel("orders-realtime").send({
+        type: "broadcast",
+        event: "refresh_sales_data",
+      });
     }
   };
+
 
   const filteredData = salesData.filter((record) =>
     Object.values(record).some((val) =>
