@@ -30,49 +30,80 @@ const SalesData: React.FC = () => {
   const [selectedRecords, setSelectedRecords] = useState<Set<string>>(new Set());
   const userRole = localStorage.getItem("userRole");
 
-  const fetchData = async () => {
+// ✅ FETCH DATA — per item, with expanded date range
+const fetchData = async () => {
+  console.log("🔍 Fetching sales data per item…");
+
   const { data, error } = await supabase
-      .from("raw_orders")
-      .select("*")
-      .order("date", { ascending: false });
+    .from("orders")
+    .select(`
+      id,
+      order_date,
+      order_time,
+      order_mode,
+      medium_y,
+      payment_mode,
+      total_amount,
+      customers ( name ),
+      order_items (
+        id,
+        quantity,
+        subtotal,
+        variant_id (
+          id,
+          menu_items ( name ),
+          category_sizes ( size )
+        )
+      )
+    `)
+    // ✅ include up to 2025 so new orders show
+    .gte("order_date", "2022-01-01")
+    .lte("order_date", "2025-12-31")
+    .order("order_date", { ascending: false });
 
-        if (error) {
-      console.error("Fetch error:", error);
-      return;
-    }
+  if (error) {
+    console.error("❌ Fetch error:", error);
+    return;
+  }
 
-  const formatted: SalesRecord[] = data.map((record: any) => ({
-      id: String(record.raw_order_id),
-      name: record.name || "Unknown",
-      time: record.time || "",
-      date: record.date || "",
-      day: record.day || "",
-      item: record.item || "N/A",
-      itemSize: record.item_size || "N/A",
-      orderType: record.order_type || "N/A",
-      quantity: record.quantity || 0,
-      medium: record.medium_y || "N/A",
-      mop: record.mop_y || "N/A",
-      total: record.total_amount || 0,
-      archived: record.is_active === false,
-    }));
+  const formatted: SalesRecord[] = (data || []).flatMap((order: any) =>
+    (order.order_items || []).map((item: any) => ({
+      id: `${order.id}-${item.id}`, // unique per item
+      name: order.customers?.name || "N/A",
+      time: order.order_time || "",
+      date: order.order_date || "",
+      day: order.order_date
+        ? new Date(order.order_date).toLocaleDateString("en-US", { weekday: "long" })
+        : "",
+      item: item.variant_id?.menu_items?.name || "N/A",
+      itemSize: item.variant_id?.category_sizes?.size || "N/A",
+      orderType: order.order_mode || "N/A",
+      quantity: item.quantity || 0,
+      medium: order.medium_y || "N/A",
+      mop: order.payment_mode || "N/A",
+      total: item.subtotal || order.total_amount || 0,
+    }))
+  );
 
   setSalesData(formatted);
 };
 
-  useEffect(() => {
-    fetchData();
-    const channel = supabase
+// ✅ USE EFFECT — now listens to both `orders` and `order_items`
+useEffect(() => {
+  fetchData();
+
+  const channel = supabase
     .channel("orders-realtime")
-    .on("postgres_changes", { event: "INSERT", schema: "public", table: "raw_orders" }, fetchData)
-    .on("postgres_changes", { event: "UPDATE", schema: "public", table: "raw_orders" }, fetchData)
-    // listen for broadcast from Archived page
-    .on("broadcast", { event: "refresh_sales_data" }, fetchData)
+    // listen to orders table changes
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "orders" }, fetchData)
+    .on("postgres_changes", { event: "UPDATE", schema: "public", table: "orders" }, fetchData)
+    // ✅ also listen to order_items so new item inserts trigger refresh
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "order_items" }, fetchData)
+    .on("postgres_changes", { event: "UPDATE", schema: "public", table: "order_items" }, fetchData)
     .subscribe();
 
   return () => supabase.removeChannel(channel);
 }, []);
-
 
   const toggleRecordSelection = (id: string) => {
     setSelectedRecords((prev) => {
@@ -111,11 +142,8 @@ const SalesData: React.FC = () => {
       return;
     }
 
-    const idsToArchive = Array.from(selectedRecords);
-    const { error } = await supabase
-      .from("raw_orders")
-      .update({ is_active: false })
-      .in("raw_order_id", idsToArchive);
+    const idsToArchive = Array.from(selectedRecords).map((id) => id.split("-")[0]); // only order id
+    const { error } = await supabase.from("orders").update({ is_active: false }).in("id", idsToArchive);
 
     if (error) {
       console.error("Error archiving records:", error);
@@ -127,13 +155,9 @@ const SalesData: React.FC = () => {
     }
   };
 
-  const filteredData = salesData
-    .filter((r) => !r.archived)
-    .filter((r) =>
-      Object.values(r).some((v) =>
-        String(v).toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    );
+  const filteredData = salesData.filter((r) =>
+    Object.values(r).some((v) => String(v).toLowerCase().includes(searchTerm.toLowerCase()))
+  );
 
   const numSelected = selectedRecords.size;
   const rowCount = filteredData.length;
@@ -146,6 +170,7 @@ const SalesData: React.FC = () => {
     }
     setSelectedRecords(new Set());
   };
+
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
       <Sidebar />
@@ -157,8 +182,8 @@ const SalesData: React.FC = () => {
         </div>
 
         <Typography variant="caption" sx={{ color: "gray", fontSize: "14px", mb: 1, mt: 1 }}>
-          This contains a detailed list of all transactions.
-          {userRole === "Admin" && " You can add, edit, or archive records as needed."}
+          This table shows all transactions from 2022–2024 with item-level details.
+          {userRole === "Admin" && " Admins can add, edit, or archive records."}
         </Typography>
 
         <Divider />
@@ -181,7 +206,12 @@ const SalesData: React.FC = () => {
             <div className="action-buttons">
               <Button
                 variant="outlined"
-                sx={{ color: "black", border: "none", "&:hover": { backgroundColor: "#EC7A1C", color: "white" }, padding: "8px 25px" }}
+                sx={{
+                  color: "black",
+                  border: "none",
+                  "&:hover": { backgroundColor: "#EC7A1C", color: "white" },
+                  padding: "8px 25px",
+                }}
                 onClick={handleAddRecord}
                 startIcon={<AddOutlined style={{ fontSize: 20 }} />}
               >
@@ -190,7 +220,12 @@ const SalesData: React.FC = () => {
 
               <Button
                 variant="outlined"
-                sx={{ color: "black", border: "none", "&:hover": { backgroundColor: "#EC7A1C", color: "white" }, padding: "8px 25px" }}
+                sx={{
+                  color: "black",
+                  border: "none",
+                  "&:hover": { backgroundColor: "#EC7A1C", color: "white" },
+                  padding: "8px 25px",
+                }}
                 onClick={handleArchiveRecord}
                 startIcon={<Inventory2Outlined style={{ fontSize: 20 }} />}
                 disabled={selectedRecords.size === 0}
@@ -200,7 +235,12 @@ const SalesData: React.FC = () => {
 
               <Button
                 variant="outlined"
-                sx={{ color: "black", border: "none", "&:hover": { backgroundColor: "#EC7A1C", color: "white" }, padding: "8px 25px" }}
+                sx={{
+                  color: "black",
+                  border: "none",
+                  "&:hover": { backgroundColor: "#EC7A1C", color: "white" },
+                  padding: "8px 25px",
+                }}
                 onClick={handleEditRecord}
                 startIcon={<EditOutlined style={{ fontSize: 20 }} />}
                 disabled={selectedRecords.size !== 1}
@@ -218,15 +258,14 @@ const SalesData: React.FC = () => {
                 {userRole === "Admin" && (
                   <th>
                     <Checkbox
-                      sx={{ 
-                        color: "#9ca3af", 
-                        "&.Mui-checked": { color: "white" } 
-                        , "&.MuiCheckbox-indeterminate": { color: "white" } 
+                      sx={{
+                        color: "#9ca3af",
+                        "&.Mui-checked": { color: "white" },
+                        "&.MuiCheckbox-indeterminate": { color: "white" },
                       }}
                       indeterminate={numSelected > 0 && numSelected < rowCount}
                       checked={rowCount > 0 && numSelected === rowCount}
                       onChange={handleSelectAllClick}
-                      inputProps={{ "aria-label": "select all records" }}
                     />
                   </th>
                 )}
@@ -250,7 +289,10 @@ const SalesData: React.FC = () => {
                     {userRole === "Admin" && (
                       <td>
                         <Checkbox
-                          sx={{ color: "#9ca3af", "&.Mui-checked": { color: "#EC7A1C" } }}
+                          sx={{
+                            color: "#9ca3af",
+                            "&.Mui-checked": { color: "#EC7A1C" },
+                          }}
                           checked={selectedRecords.has(record.id)}
                           onChange={() => toggleRecordSelection(record.id)}
                         />
@@ -271,7 +313,9 @@ const SalesData: React.FC = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={12} style={{ textAlign: "center" }}>No records found</td>
+                  <td colSpan={12} style={{ textAlign: "center" }}>
+                    No records found
+                  </td>
                 </tr>
               )}
             </tbody>
