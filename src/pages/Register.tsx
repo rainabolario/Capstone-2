@@ -11,7 +11,6 @@ import {
   Button
 } from "@mui/material";
 import { supabase } from "../supabaseClient";
-import bcrypt from "bcryptjs";
 
 interface RegisterProps {
   onClose: () => void;
@@ -58,22 +57,20 @@ const Register: React.FC<RegisterProps> = ({ onClose }) => {
       if (authData.user) {
         const userId = authData.user.id;
 
-        // 2️⃣ Hash the password
-        const hashedPassword = bcrypt.hashSync(password, 10);
-
-        // 3️⃣ Insert into your users table
+        // 2️⃣ Insert profile into your `users` table (DO NOT store password here)
         const { error: userError } = await supabase.from("users").insert([
           {
             id: userId,
             name,
             email,
             role,
-            password: hashedPassword, // store hashed password
             is_active: true,
           },
         ]);
 
         if (userError) {
+          // If profile insertion fails, we still have the auth user created.
+          // You may want to handle cleanup or notify admin.
           setError(userError.message);
         } else {
           alert("✅ User registered! Please confirm your email before logging in.");

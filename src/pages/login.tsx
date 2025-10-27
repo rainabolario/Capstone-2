@@ -3,7 +3,6 @@ import { useState } from "react";
 import { useNavigate} from "react-router-dom";
 import "../css/login.css";
 import { supabase } from "../supabaseClient";
-// import bcrypt from "bcryptjs";
 
 interface LoginProps {
   onLogin: (email: string, role: string) => void; 
@@ -23,7 +22,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     setLoading(true);
     
     try {
-      // Step 1: Sign in user with Supabase
+      // Sign in user with Supabase
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -39,7 +38,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         return;
       }
 
-      // Step 2: Fetch user info from 'users' table
+      // Fetch user info from 'users' table
       const { data: userData, error: fetchError } = await supabase
         .from("users")
         .select("id, role")
@@ -55,15 +54,12 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       const userId = userData.id;
       const userRole = userData.role || "Staff";
 
-      // Step 3: Store session info
+      // Store session info locally
       localStorage.setItem("userId", userId);
       localStorage.setItem("userRole", userRole);
       localStorage.setItem("userEmail", email);
 
-      // Step 4: Callback with role
       onLogin(email, userRole);
-
-      // Step 5: Redirect to salesoverview (both roles)
       navigate("/salesoverview");
     } catch (err: any) {
       console.error("Login error:", err);
