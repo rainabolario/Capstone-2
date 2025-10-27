@@ -1,14 +1,9 @@
-import React, { useEffect, useState } from "react"; 
+import React, { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import "../css/ArchivedData.css";
 import { supabase } from "../supabaseClient";
-import {
-  Checkbox,
-  Typography,
-  Divider,
-  Button
-} from "@mui/material";
-import RestoreIcon from '@mui/icons-material/Restore';
+import { Checkbox, Typography, Divider, Button } from "@mui/material";
+import RestoreIcon from "@mui/icons-material/Restore";
 import SearchIcon from "@mui/icons-material/Search";
 
 interface SalesRecord {
@@ -37,32 +32,59 @@ const ArchivedData: React.FC = () => {
     fetchArchived();
   }, []);
 
-  // ✅ Fetch only inactive (archived) records
+  // ✅ Fetch archived (inactive) records from "orders"
   const fetchArchived = async () => {
     setLoading(true);
 
     const { data, error } = await supabase
-      .from("raw_orders")
-      .select("*")
-      .eq("is_active", false); // changed from archived → is_active = false
+      .from("orders")
+      .select(`
+        id,
+        order_date,
+        order_time,
+        order_mode,
+        medium_y,
+        payment_mode,
+        total_amount,
+        is_active,
+        customers ( name ),
+        order_items (
+          id,
+          quantity,
+          subtotal,
+          variant_id (
+            id,
+            menu_items ( name ),
+            category_sizes ( size )
+          )
+        )
+      `)
+      .eq("is_active", false)
+      .order("order_date", { ascending: false });
 
     if (error) {
       console.error("Error fetching archived data:", error);
     } else {
-      const formatted = data.map((r: any) => ({
-        id: String(r.raw_order_id),
-        name: r.name || "Unknown",
-        time: r.time || "",
-        date: r.date || "",
-        day: r.day || "",
-        item: r.item || "N/A",
-        itemSize: r.item_size || "N/A",
-        orderType: r.order_type || "N/A",
-        quantity: r.quantity || 0,
-        medium: r.medium_y || "N/A",
-        mop: r.mop_y || "N/A",
-        total: r.total_amount || 0,
-      }));
+      const formatted: SalesRecord[] = (data || []).flatMap((order: any) =>
+        (order.order_items || []).map((item: any) => ({
+          id: `${order.id}-${item.id}`,
+          name: order.customers?.name || "N/A",
+          time: order.order_time || "",
+          date: order.order_date || "",
+          day: order.order_date
+            ? new Date(order.order_date).toLocaleDateString("en-US", {
+                weekday: "long",
+              })
+            : "",
+          item: item.variant_id?.menu_items?.name || "N/A",
+          itemSize: item.variant_id?.category_sizes?.size || "N/A",
+          orderType: order.order_mode || "N/A",
+          quantity: item.quantity || 0,
+          medium: order.medium_y || "N/A",
+          mop: order.payment_mode || "N/A",
+          total: item.subtotal || order.total_amount || 0,
+        }))
+      );
 
       setSalesData(formatted);
     }
@@ -77,17 +99,22 @@ const ArchivedData: React.FC = () => {
     );
   };
 
-  // ✅ Restore selected records (make them active again)
+  // ✅ Restore archived records (make active again)
   const handleRestore = async () => {
     if (selectedIds.length === 0) {
       alert("Please select at least one record to restore.");
       return;
     }
 
+    // extract base order IDs (before the "-itemid")
+    const orderIds = Array.from(
+      new Set(selectedIds.map((id) => Number(id.split("-")[0])))
+    );
+
     const { error } = await supabase
-      .from("raw_orders")
-      .update({ is_active: true }) // changed from archived:false → is_active:true
-      .in("raw_order_id", selectedIds);
+      .from("orders")
+      .update({ is_active: true })
+      .in("id", orderIds);
 
     if (error) {
       console.error("Error restoring records:", error);
@@ -104,7 +131,7 @@ const ArchivedData: React.FC = () => {
     }
   };
 
-
+  // ✅ Search filter
   const filteredData = salesData.filter((record) =>
     Object.values(record).some((val) =>
       String(val).toLowerCase().includes(searchTerm.toLowerCase())
@@ -126,8 +153,12 @@ const ArchivedData: React.FC = () => {
           </div>
         </div>
 
-        <Typography variant="caption" sx={{ color: 'gray', fontSize: '14px', mb:1, mt: 1 }}>
-          This contains all previously archived items. You can restore them to the sales data page.
+        <Typography
+          variant="caption"
+          sx={{ color: "gray", fontSize: "14px", mb: 1, mt: 1 }}
+        >
+          This contains all previously archived items. You can restore them to
+          the sales data page.
         </Typography>
         <Divider />
 
@@ -157,9 +188,9 @@ const ArchivedData: React.FC = () => {
               "&:hover": {
                 backgroundColor: "#ff8c42",
                 color: "white",
-              }
+              },
             }}
-            disabled={userRole !== "Admin" || selectedIds.length === 0} 
+            disabled={userRole !== "Admin" || selectedIds.length === 0}
           >
             Restore Selected
           </Button>
@@ -175,13 +206,19 @@ const ArchivedData: React.FC = () => {
                 <tr>
                   <th>
                     <Checkbox
-                      sx={{ 
-                        color: "#9ca3af", 
-                        "&.Mui-checked": { color: "white" } 
-                        , "&.MuiCheckbox-indeterminate": { color: "white" } 
+                      sx={{
+                        color: "#9ca3af",
+                        "&.Mui-checked": { color: "white" },
+                        "&.MuiCheckbox-indeterminate": { color: "white" },
                       }}
-                      indeterminate={selectedIds.length > 0 && selectedIds.length < filteredData.length}
-                      checked={selectedIds.length === filteredData.length && filteredData.length > 0}
+                      indeterminate={
+                        selectedIds.length > 0 &&
+                        selectedIds.length < filteredData.length
+                      }
+                      checked={
+                        selectedIds.length === filteredData.length &&
+                        filteredData.length > 0
+                      }
                       onChange={(e) =>
                         e.target.checked
                           ? setSelectedIds(filteredData.map((r) => r.id))
@@ -208,11 +245,9 @@ const ArchivedData: React.FC = () => {
                     <tr key={record.id}>
                       <td>
                         <Checkbox
-                          sx={{ 
-                            color: 'gray', 
-                            '&.Mui-checked': { 
-                              color: '#ff8c42' 
-                            } 
+                          sx={{
+                            color: "gray",
+                            "&.Mui-checked": { color: "#ff8c42" },
                           }}
                           checked={selectedIds.includes(record.id)}
                           onChange={() => toggleSelect(record.id)}

@@ -30,80 +30,80 @@ const SalesData: React.FC = () => {
   const [selectedRecords, setSelectedRecords] = useState<Set<string>>(new Set());
   const userRole = localStorage.getItem("userRole");
 
-// ✅ FETCH DATA — per item, with expanded date range
-const fetchData = async () => {
-  console.log("🔍 Fetching sales data per item…");
+  // ✅ FETCH DATA — per item, with active filter
+  const fetchData = async () => {
+    console.log("🔍 Fetching sales data per item…");
 
-  const { data, error } = await supabase
-    .from("orders")
-    .select(`
-      id,
-      order_date,
-      order_time,
-      order_mode,
-      medium_y,
-      payment_mode,
-      total_amount,
-      customers ( name ),
-      order_items (
+    const { data, error } = await supabase
+      .from("orders")
+      .select(`
         id,
-        quantity,
-        subtotal,
-        variant_id (
+        order_date,
+        order_time,
+        order_mode,
+        medium_y,
+        payment_mode,
+        total_amount,
+        is_active,
+        customers ( name ),
+        order_items (
           id,
-          menu_items ( name ),
-          category_sizes ( size )
+          quantity,
+          subtotal,
+          variant_id (
+            id,
+            menu_items ( name ),
+            category_sizes ( size )
+          )
         )
-      )
-    `)
-    // ✅ include up to 2025 so new orders show
-    .gte("order_date", "2022-01-01")
-    .lte("order_date", "2025-12-31")
-    .order("order_date", { ascending: false });
+      `)
+      .eq("is_active", true) // ✅ show only active records
+      .gte("order_date", "2022-01-01")
+      .lte("order_date", "2025-12-31")
+      .order("order_date", { ascending: false });
 
-  if (error) {
-    console.error("❌ Fetch error:", error);
-    return;
-  }
+    if (error) {
+      console.error("❌ Fetch error:", error);
+      return;
+    }
 
-  const formatted: SalesRecord[] = (data || []).flatMap((order: any) =>
-    (order.order_items || []).map((item: any) => ({
-      id: `${order.id}-${item.id}`, // unique per item
-      name: order.customers?.name || "N/A",
-      time: order.order_time || "",
-      date: order.order_date || "",
-      day: order.order_date
-        ? new Date(order.order_date).toLocaleDateString("en-US", { weekday: "long" })
-        : "",
-      item: item.variant_id?.menu_items?.name || "N/A",
-      itemSize: item.variant_id?.category_sizes?.size || "N/A",
-      orderType: order.order_mode || "N/A",
-      quantity: item.quantity || 0,
-      medium: order.medium_y || "N/A",
-      mop: order.payment_mode || "N/A",
-      total: item.subtotal || order.total_amount || 0,
-    }))
-  );
+    const formatted: SalesRecord[] = (data || []).flatMap((order: any) =>
+      (order.order_items || []).map((item: any) => ({
+        id: `${order.id}-${item.id}`, // unique per item
+        name: order.customers?.name || "N/A",
+        time: order.order_time || "",
+        date: order.order_date || "",
+        day: order.order_date
+          ? new Date(order.order_date).toLocaleDateString("en-US", { weekday: "long" })
+          : "",
+        item: item.variant_id?.menu_items?.name || "N/A",
+        itemSize: item.variant_id?.category_sizes?.size || "N/A",
+        orderType: order.order_mode || "N/A",
+        quantity: item.quantity || 0,
+        medium: order.medium_y || "N/A",
+        mop: order.payment_mode || "N/A",
+        total: item.subtotal || order.total_amount || 0,
+        archived: order.is_active === false,
+      }))
+    );
 
-  setSalesData(formatted);
-};
+    setSalesData(formatted);
+  };
 
-// ✅ USE EFFECT — now listens to both `orders` and `order_items`
-useEffect(() => {
-  fetchData();
+  // ✅ USE EFFECT — listens to both orders + order_items changes
+  useEffect(() => {
+    fetchData();
 
-  const channel = supabase
-    .channel("orders-realtime")
-    // listen to orders table changes
-    .on("postgres_changes", { event: "INSERT", schema: "public", table: "orders" }, fetchData)
-    .on("postgres_changes", { event: "UPDATE", schema: "public", table: "orders" }, fetchData)
-    // ✅ also listen to order_items so new item inserts trigger refresh
-    .on("postgres_changes", { event: "INSERT", schema: "public", table: "order_items" }, fetchData)
-    .on("postgres_changes", { event: "UPDATE", schema: "public", table: "order_items" }, fetchData)
-    .subscribe();
+    const channel = supabase
+      .channel("orders-realtime")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "orders" }, fetchData)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "orders" }, fetchData)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "order_items" }, fetchData)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "order_items" }, fetchData)
+      .subscribe();
 
-  return () => supabase.removeChannel(channel);
-}, []);
+    return () => supabase.removeChannel(channel);
+  }, []);
 
   const toggleRecordSelection = (id: string) => {
     setSelectedRecords((prev) => {
@@ -132,6 +132,7 @@ useEffect(() => {
     }
   };
 
+  // ✅ FIXED ARCHIVE FUNCTION
   const handleArchiveRecord = async () => {
     if (userRole !== "Admin") {
       alert("Only Admins can archive records.");
@@ -142,8 +143,13 @@ useEffect(() => {
       return;
     }
 
-    const idsToArchive = Array.from(selectedRecords).map((id) => id.split("-")[0]); // only order id
-    const { error } = await supabase.from("orders").update({ is_active: false }).in("id", idsToArchive);
+    // Convert to numeric IDs
+    const idsToArchive = Array.from(selectedRecords).map((id) => Number(id.split("-")[0]));
+
+    const { error } = await supabase
+      .from("orders")
+      .update({ is_active: false })
+      .in("id", idsToArchive);
 
     if (error) {
       console.error("Error archiving records:", error);
@@ -182,7 +188,7 @@ useEffect(() => {
         </div>
 
         <Typography variant="caption" sx={{ color: "gray", fontSize: "14px", mb: 1, mt: 1 }}>
-          This table shows all transactions from 2022–2024 with item-level details.
+          This table shows all transactions from 2022–2025 with item-level details.
           {userRole === "Admin" && " Admins can add, edit, or archive records."}
         </Typography>
 
