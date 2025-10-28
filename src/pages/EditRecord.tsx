@@ -1,4 +1,3 @@
-
 import type React from "react"
 import { useState, useEffect } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
@@ -20,6 +19,7 @@ interface SalesRecord {
   address: string
   medium_y: string
   mop_y: string
+  total_amount: number
 }
 
 interface ItemOption {
@@ -39,49 +39,65 @@ const EditRecord: React.FC = () => {
   const [mediums, setMediums] = useState<string[]>([])
   const [paymentModes, setPaymentModes] = useState<string[]>([])
 
+  // =============================
+  // FETCH SELECTED RECORD DETAILS
+  // =============================
   useEffect(() => {
     const loadRecord = async () => {
       if (location.state?.record) {
-        const recordId = location.state.record.raw_order_id || location.state.record.id
-        console.log("[v0] Loading record with ID:", recordId)
+        const orderId = Number(location.state.record.id.split("-")[0])
+        const orderItemId = Number(location.state.record.id.split("-")[1])
 
         try {
-          // Fetch the complete record from database
-          const { data: fullRecord, error } = await supabase
-            .from("raw_orders")
-            .select("*")
-            .eq("raw_order_id", recordId)
+          // 🟠 Fetch order details (including joined customer + order_items)
+          const { data, error } = await supabase
+            .from("orders")
+            .select(`
+              id,
+              order_date,
+              order_time,
+              order_mode,
+              medium_y,
+              payment_mode,
+              total_amount,
+              customers ( id, name ),
+              order_items (
+                id,
+                quantity,
+                variant_id (
+                  menu_items ( name ),
+                  category_sizes ( size )
+                )
+              )
+            `)
+            .eq("id", orderId)
             .single()
 
           if (error) throw error
 
-          if (fullRecord) {
-            console.log("[v0] Full record from DB:", fullRecord)
-            console.log("[v0] item_size value:", fullRecord.item_size)
-            console.log("[v0] order_type value:", fullRecord.order_type)
-            console.log("[v0] medium_y value:", fullRecord.medium_y)
-            console.log("[v0] mop_y value:", fullRecord.mop_y)
+          const orderItem = data.order_items?.[0]
 
-            const normalizedRecord: SalesRecord = {
-              id: fullRecord.raw_order_id,
-              name: (fullRecord.name || "").toString().trim(),
-              time: (fullRecord.time || "").toString().trim(),
-              date: (fullRecord.date || "").toString().trim(),
-              day: (fullRecord.day || "").toString().trim(),
-              item: (fullRecord.item || "").toString().toUpperCase().trim(),
-              item_size: (fullRecord.item_size || "").toString().toUpperCase().trim(),
-              order_type: (fullRecord.order_type || "").toString().toUpperCase().trim(),
-              quantity: fullRecord.quantity || 0,
-              address: (fullRecord.address || "").toString().trim(),
-              medium_y: (fullRecord.medium_y || "").toString().toUpperCase().trim(),
-              mop_y: (fullRecord.mop_y || "").toString().toUpperCase().trim(),
-            }
-
-            console.log("[v0] Normalized record:", normalizedRecord)
-            setRecord(normalizedRecord)
+          const normalizedRecord: SalesRecord = {
+            id: data.id,
+            name: data.customers?.name || "",
+            time: data.order_time || "",
+            date: data.order_date || "",
+            day: data.order_date
+              ? new Date(data.order_date).toLocaleDateString("en-US", { weekday: "long" })
+              : "",
+            item: orderItem?.variant_id?.menu_items?.name?.toUpperCase() || "",
+            item_size: orderItem?.variant_id?.category_sizes?.size?.toUpperCase() || "",
+            order_type: data.order_mode?.toUpperCase() || "",
+            quantity: orderItem?.quantity || 0,
+            address: "",
+            medium_y: data.medium_y?.toUpperCase() || "",
+            mop_y: data.payment_mode?.toUpperCase() || "",
+            total_amount: data.total_amount || 0,
           }
+
+          setRecord(normalizedRecord)
         } catch (err) {
-          console.error("[v0] Error fetching record:", err)
+          console.error("❌ Error fetching record:", err)
         }
       }
       setLoading(false)
@@ -90,97 +106,126 @@ const EditRecord: React.FC = () => {
     loadRecord()
   }, [location.state])
 
-  // Fetch menu items and dropdown options from database
+  // =============================
+  // FETCH DROPDOWN DATA
+  // =============================
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch menu items
-        const { data: itemsData, error: itemsError } = await supabase.from("menu_items").select("name, category_id")
-        if (!itemsError && itemsData) {
+        const { data: itemsData } = await supabase.from("menu_items").select("name, category_id")
+        if (itemsData) {
           const normalizedItems = itemsData.map((item) => ({
             item_name: (item.name || "").toString().toUpperCase().trim(),
             category: item.category_id,
           }))
-          console.log("[v0] Fetched items:", normalizedItems)
           setItems(normalizedItems)
         }
 
-        const { data: sizesData, error: sizesError } = await supabase.from("category_sizes").select("size")
-        if (!sizesError && sizesData) {
+        const { data: sizesData } = await supabase.from("category_sizes").select("size")
+        if (sizesData) {
           const uniqueSizes = Array.from(
-            new Set(sizesData.map((s) => (s.size || "").toString().toUpperCase().trim())),
+            new Set(sizesData.map((s) => (s.size || "").toString().toUpperCase().trim()))
           ).filter((s) => s !== "")
-          console.log("[v0] Fetched sizes:", uniqueSizes)
           setItemSizes(uniqueSizes)
         }
 
-        const { data: categoriesData, error: categoriesError } = await supabase.from("category").select("name")
-        if (!categoriesError && categoriesData) {
+        const { data: categoriesData } = await supabase.from("category").select("name")
+        if (categoriesData) {
           const uniqueTypes = Array.from(
-            new Set(categoriesData.map((c) => (c.name || "").toString().toUpperCase().trim())),
+            new Set(categoriesData.map((c) => (c.name || "").toString().toUpperCase().trim()))
           ).filter((t) => t !== "")
-          console.log("[v0] Fetched order types:", uniqueTypes)
           setOrderTypes(uniqueTypes)
         }
 
-        const { data: ordersData, error: ordersError } = await supabase.from("raw_orders").select("medium_y")
-        if (!ordersError && ordersData) {
+        const { data: mediumsData } = await supabase.from("orders").select("medium_y")
+        if (mediumsData) {
           const uniqueMediums = Array.from(
-            new Set(ordersData.map((o) => (o.medium_y || "").toString().toUpperCase().trim())),
+            new Set(mediumsData.map((m) => (m.medium_y || "").toString().toUpperCase().trim()))
           ).filter((m) => m !== "")
-          console.log("[v0] Fetched mediums:", uniqueMediums)
           setMediums(uniqueMediums)
         }
 
-        const { data: modesData, error: modesError } = await supabase.from("raw_orders").select("mop_y")
-        if (!modesError && modesData) {
+        const { data: modesData } = await supabase.from("orders").select("payment_mode")
+        if (modesData) {
           const uniqueModes = Array.from(
-            new Set(modesData.map((m) => (m.mop_y || "").toString().toUpperCase().trim())),
+            new Set(modesData.map((m) => (m.payment_mode || "").toString().toUpperCase().trim()))
           ).filter((m) => m !== "")
-          console.log("[v0] Fetched payment modes:", uniqueModes)
           setPaymentModes(uniqueModes)
         }
       } catch (err) {
-        console.error("[v0] Error fetching data:", err)
+        console.error("Error fetching dropdown data:", err)
       }
     }
+
     fetchData()
   }, [])
 
+  // =============================
+  // HANDLE FIELD CHANGES
+  // =============================
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target
     if (record) {
-      const newValue = name === "quantity" ? Number.parseFloat(value) || 0 : value.toUpperCase().trim()
-      console.log(`[v0] Changed ${name} to:`, newValue)
+      const newValue =
+        name === "quantity" || name === "total_amount"
+          ? Number(value) || 0
+          : value.toUpperCase().trim()
       setRecord({ ...record, [name]: newValue })
     }
   }
 
+  // =============================
+  // SAVE / UPDATE RECORD
+  // =============================
   const handleSave = async () => {
     if (!record) return
-    try {
-      const { error } = await supabase
-        .from("raw_orders")
-        .update({
-          name: record.name,
-          time: record.time,
-          date: record.date,
-          day: record.day,
-          item: record.item,
-          item_size: record.item_size,
-          order_type: record.order_type,
-          quantity: record.quantity,
-          address: record.address,
-          medium_y: record.medium_y,
-          mop_y: record.mop_y,
-        })
-        .eq("raw_order_id", record.id)
 
-      if (error) throw error
+    try {
+      const orderId = Number(location.state.record.id.split("-")[0])
+      const orderItemId = Number(location.state.record.id.split("-")[1])
+
+      // 1️⃣ Update customer name
+      const { data: orderData, error: orderFetchError } = await supabase
+        .from("orders")
+        .select("customer_id")
+        .eq("id", orderId)
+        .single()
+
+      if (!orderFetchError && orderData?.customer_id) {
+        await supabase
+          .from("customers")
+          .update({ name: record.name })
+          .eq("id", orderData.customer_id)
+      }
+
+      // 2️⃣ Update orders table
+      const { error: orderError } = await supabase
+        .from("orders")
+        .update({
+          order_mode: record.order_type,
+          medium_y: record.medium_y,
+          payment_mode: record.mop_y,
+          total_amount: record.total_amount,
+        })
+        .eq("id", orderId)
+
+      if (orderError) throw orderError
+
+      // 3️⃣ Update order_items table
+      const { error: itemError } = await supabase
+        .from("order_items")
+        .update({
+          quantity: record.quantity,
+          subtotal: record.total_amount,
+        })
+        .eq("id", orderItemId)
+
+      if (itemError) throw itemError
+
       alert("✅ Record updated successfully!")
       navigate(-1)
     } catch (err: any) {
-      console.error("❌ Error updating record:", err.message)
+      console.error("❌ Error updating record:", err)
       alert("❌ Failed to update record. Check console for details.")
     }
   }
@@ -190,24 +235,22 @@ const EditRecord: React.FC = () => {
   if (loading) return <p>Loading record...</p>
   if (!record) return <p>No record found. Please go back and try again.</p>
 
-  const menuProps = {
-    PaperProps: {
-      style: { maxHeight: 250, width: 300 },
-    },
-  }
+  const menuProps = { PaperProps: { style: { maxHeight: 250, width: 300 } } }
 
+  // =============================
+  // UI RENDER
+  // =============================
   return (
     <div className="edit-record-container">
       <Sidebar />
       <div className="edit-form-container">
         <h2>ORDER RECORD</h2>
-
         <div className="edit-form">
           <h3>Edit Order Record</h3>
           <Divider />
 
           <div className="edit-form-wrapper">
-            {/* Customer Name */}
+            {/* Existing Fields — No UI change */}
             <div className="form-row">
               <TextField
                 className="form-field"
@@ -218,7 +261,6 @@ const EditRecord: React.FC = () => {
               />
             </div>
 
-            {/* Date / Time / Day */}
             <div className="form-row">
               <TextField
                 className="form-field"
@@ -239,11 +281,10 @@ const EditRecord: React.FC = () => {
                 label="Day"
                 name="day"
                 value={record.day || ""}
-                onChange={handleChange}
+                disabled
               />
             </div>
 
-            {/* Item Info */}
             <div className="form-row">
               <TextField
                 select
@@ -278,7 +319,6 @@ const EditRecord: React.FC = () => {
               </TextField>
             </div>
 
-            {/* Order Type / Quantity */}
             <div className="form-row">
               <TextField
                 select
@@ -306,7 +346,6 @@ const EditRecord: React.FC = () => {
               />
             </div>
 
-            {/* Medium / Mode of Payment */}
             <div className="form-row">
               <TextField
                 select
@@ -340,17 +379,32 @@ const EditRecord: React.FC = () => {
                 ))}
               </TextField>
             </div>
+
+            {/* ✅ Total Amount Field */}
+            <div className="form-row">
+              <TextField
+                className="form-field"
+                label="Total Amount"
+                name="total_amount"
+                type="number"
+                value={record.total_amount ?? 0}
+                onChange={handleChange}
+              />
+            </div>
           </div>
         </div>
 
-        {/* Buttons */}
         <div className="button-form-container">
           <Button
             variant="outlined"
             sx={{
               color: "gray",
               borderColor: "gray",
-              "&:hover": { backgroundColor: "#EC7A1C", color: "white", border: "1px solid #EC7A1C" },
+              "&:hover": {
+                backgroundColor: "#EC7A1C",
+                color: "white",
+                border: "1px solid #EC7A1C",
+              },
               padding: "8px 25px",
             }}
             onClick={handleCancel}
