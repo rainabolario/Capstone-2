@@ -3,13 +3,13 @@ import express from 'express';
 import { createClient } from '@supabase/supabase-js';
 import snowflake from 'snowflake-sdk';
 
-// 🧩 Connect to Supabase
+// -------------------- Supabase --------------------
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-// 🧊 Connect to Snowflake
+// -------------------- Snowflake --------------------
 const connection = snowflake.createConnection({
   account: process.env.SNOWFLAKE_ACCOUNT,
   username: process.env.SNOWFLAKE_USER,
@@ -24,7 +24,7 @@ function connectSnowflake() {
   return new Promise((resolve, reject) => {
     connection.connect((err, conn) => {
       if (err) return reject(err);
-      console.log('✅ Connected to Snowflake (Realtime Listener Ready)');
+      console.log('✅ Connected to Snowflake');
       resolve(conn);
     });
   });
@@ -36,10 +36,7 @@ function executeQuery(sql) {
     connection.execute({
       sqlText: sql,
       complete: (err, stmt, rows) => {
-        if (err) {
-          console.error('❌ Snowflake SQL Error:', err.message);
-          return reject(err);
-        }
+        if (err) return reject(err);
         resolve(rows);
       },
     });
@@ -54,9 +51,34 @@ function sqlValue(value) {
   return `'${String(value).replace(/'/g, "''")}'`;
 }
 
-// 🎧 Setup realtime listener for a table
+// Get primary key of a table dynamically from Snowflake
+async function getPrimaryKey(tableName) {
+  const sql = `
+    SELECT COLUMN_NAME
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = '${process.env.SNOWFLAKE_SCHEMA.toUpperCase()}'
+      AND TABLE_NAME = '${tableName.toUpperCase()}'
+      AND COLUMN_KEY = 'PRIMARY'
+  `;
+
+  try {
+    const rows = await executeQuery(sql);
+    if (!rows || rows.length === 0) {
+      console.warn(`⚠️ No primary key found for ${tableName}, defaulting to "id"`);
+      return 'id';
+    }
+    return rows[0].COLUMN_NAME;
+  } catch (err) {
+    console.warn(`⚠️ Error fetching primary key for ${tableName}:`, err.message);
+    return 'id';
+  }
+}
+
+// Setup realtime listener dynamically
 async function setupRealtimeSync(tableName) {
   console.log(`🔍 Listening for changes on ${tableName}...`);
+
+  const pk = await getPrimaryKey(tableName);
 
   supabase
     .channel(`realtime:${tableName}`)
@@ -64,26 +86,30 @@ async function setupRealtimeSync(tableName) {
       'postgres_changes',
       { event: '*', schema: 'public', table: tableName },
       async (payload) => {
-        const { eventType, new: newRow, old: oldRow } = payload;
+        const eventType = payload.eventType || payload.type;
+        const newRow = payload.new;
+        const oldRow = payload.old;
+
+        console.log(`🔔 [${tableName}] Event: ${eventType}`, payload);
 
         try {
           if (eventType === 'INSERT') {
             const columns = Object.keys(newRow);
-            const values = columns.map((c) => sqlValue(newRow[c])).join(', ');
-            const sql = `INSERT INTO ${tableName} (${columns.join(', ')}) VALUES (${values});`;
+            const values = columns.map(c => sqlValue(newRow[c])).join(', ');
+            const sql = `INSERT INTO "${tableName.toUpperCase()}" (${columns.join(', ')}) VALUES (${values});`;
             await executeQuery(sql);
-            console.log(`🟢 Inserted new row into ${tableName}`);
+            console.log(`🟢 Inserted row into ${tableName}`);
           } else if (eventType === 'UPDATE') {
             const updates = Object.keys(newRow)
-              .map((col) => `${col} = ${sqlValue(newRow[col])}`)
+              .map(c => `${c} = ${sqlValue(newRow[c])}`)
               .join(', ');
-            const sql = `UPDATE ${tableName} SET ${updates} WHERE id = ${oldRow.id};`;
+            const sql = `UPDATE "${tableName.toUpperCase()}" SET ${updates} WHERE ${pk} = ${sqlValue(oldRow[pk])};`;
             await executeQuery(sql);
-            console.log(`🟡 Updated row #${oldRow.id} in ${tableName}`);
+            console.log(`🟡 Updated row #${oldRow[pk]} in ${tableName}`);
           } else if (eventType === 'DELETE') {
-            const sql = `DELETE FROM ${tableName} WHERE id = ${oldRow.id};`;
+            const sql = `DELETE FROM "${tableName.toUpperCase()}" WHERE ${pk} = ${sqlValue(oldRow[pk])};`;
             await executeQuery(sql);
-            console.log(`🔴 Deleted row #${oldRow.id} from ${tableName}`);
+            console.log(`🔴 Deleted row #${oldRow[pk]} from ${tableName}`);
           }
         } catch (err) {
           console.error(`❌ Error syncing ${tableName}:`, err.message);
@@ -92,12 +118,12 @@ async function setupRealtimeSync(tableName) {
     )
     .subscribe((status) => {
       if (status === 'SUBSCRIBED') {
-        console.log(`✅ Subscribed to realtime updates for ${tableName}`);
+        console.log(`✅ Subscribed to realtime updates for ${tableName} (PK: ${pk})`);
       }
     });
 }
 
-// 🏁 Main startup
+// -------------------- Main --------------------
 async function main() {
   await connectSnowflake();
 
@@ -124,16 +150,18 @@ async function main() {
     setupRealtimeSync(table);
   }
 
-  console.log('🚀 Realtime sync active. Listening for Supabase changes...');
+  console.log('🚀 Realtime sync active');
 }
 
-// --- Express server just to bind a port ---
+// -------------------- Express Server --------------------
 const app = express();
-app.get('/', (req, res) => res.send('Supabase → Snowflake Realtime Sync Running'));
+
+app.get('/', (req, res) => {
+  res.send('Supabase → Snowflake Realtime Sync Running');
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🌐 Server bound to port ${PORT} (required for web service deployment)`);
-  // Start main realtime sync after server is up
+  console.log(`🌐 Server running on port ${PORT}`);
   main();
 });
