@@ -19,10 +19,12 @@
     "@types/react-router-dom": "^5.3.3",
     "bcryptjs": "^3.0.2",
     "dayjs": "^1.11.18",
+    "dotenv": "^17.2.3",
     "lucide-react": "^0.542.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
-    "react-router-dom": "^7.9.4"
+    "react-router-dom": "^7.9.4",
+    "snowflake-sdk": "^2.3.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.33.0",
