@@ -9,7 +9,7 @@ import {
   IconButton,
   Box,
 } from "@mui/material";
-import AddCardIcon from '@mui/icons-material/AddCard';
+import AddCardIcon from "@mui/icons-material/AddCard";
 import DeleteIcon from "@mui/icons-material/Delete";
 import type { SelectChangeEvent } from "@mui/material/Select";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -19,26 +19,28 @@ import { TimePicker } from "@mui/x-date-pickers/TimePicker";
 import { Dayjs } from "dayjs";
 import "../../css/CustomerDetails.css";
 import { useEffect, useState } from "react";
+import { supabase } from "../../supabaseClient"; // ✅ adjust path if needed
 
-// ✅ Keep Customer flat (no nested data)
 export interface Customer {
-  name: string
-  date: Dayjs | null
-  time: Dayjs | null
-  paymentMode: string
-  orderMode: string
+  name: string;
+  date: Dayjs | null;
+  time: Dayjs | null;
+  paymentMode: string;
+  orderMode: string;
 }
 
-// ✅ Props for the component
 interface Props {
-  data: Customer
-  onChange: (customer: Customer) => void
+  data: Customer;
+  onChange: (customer: Customer) => void;
 }
 
 export default function CustomerDetails({ data, onChange }: Props) {
-  const [paymentModes, setPaymentModes] = useState<string[]>(() => {
-    return data.paymentMode ? data.paymentMode.split(", ") : [""];
-  });
+  const [paymentModes, setPaymentModes] = useState<string[]>(() =>
+    data.paymentMode ? data.paymentMode.split(", ") : [""]
+  );
+
+  const [orderModeOptions, setOrderModeOptions] = useState<string[]>([]);
+  const [paymentModeOptions, setPaymentModeOptions] = useState<string[]>([]);
 
   useEffect(() => {
     if (data.paymentMode === "") {
@@ -46,14 +48,41 @@ export default function CustomerDetails({ data, onChange }: Props) {
     }
   }, [data.paymentMode]);
 
+  // ✅ Fetch data from 'medium' (order modes) and 'mop' (modes of payment)
+  useEffect(() => {
+    const fetchDropdownData = async () => {
+      try {
+        // Fetch from 'medium' table
+        const { data: mediumData, error: mediumError } = await supabase
+          .from("medium")
+          .select("name");
+
+        // Fetch from 'mop' table
+        const { data: mopData, error: mopError } = await supabase
+          .from("mop")
+          .select("name");
+
+        if (mediumError) console.error("Error fetching from 'medium':", mediumError);
+        if (mopError) console.error("Error fetching from 'mop':", mopError);
+
+        if (mediumData) setOrderModeOptions(mediumData.map((row) => row.name));
+        if (mopData) setPaymentModeOptions(mopData.map((row) => row.name));
+      } catch (err) {
+        console.error("Unexpected fetch error:", err);
+      }
+    };
+
+    fetchDropdownData();
+  }, []);
+
   const updateField = (field: keyof Customer, value: any) => {
-    onChange({ ...data, [field]: value })
-  }
+    onChange({ ...data, [field]: value });
+  };
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const capitalizedValue = e.target.value.toUpperCase()
-    updateField("name", capitalizedValue)
-  }
+    const capitalizedValue = e.target.value.toUpperCase();
+    updateField("name", capitalizedValue);
+  };
 
   const handlePaymentModeChange = (index: number, newValue: string) => {
     const newModes = [...paymentModes];
@@ -125,7 +154,7 @@ export default function CustomerDetails({ data, onChange }: Props) {
           </div>
         </LocalizationProvider>
 
-        {/* Order Mode */}
+        {/* Mode of Order */}
         <FormControl fullWidth>
           <InputLabel id="order-mode-label" shrink>
             Mode of Order
@@ -139,16 +168,19 @@ export default function CustomerDetails({ data, onChange }: Props) {
               selected ? selected : <span style={{ color: "#9e9e9e" }}>Select order mode</span>
             }
           >
-            <MenuItem value="Instagram">Instagram</MenuItem>
-            <MenuItem value="Facebook">Facebook</MenuItem>
-            <MenuItem value="Viber">Viber</MenuItem>
-            <MenuItem value="Hazel's Phone">Hazel's Phone</MenuItem>
-            <MenuItem value="Enzo's Phone">Enzo's Phone</MenuItem>
-            <MenuItem value="Other">Other</MenuItem>
+            {orderModeOptions.length > 0 ? (
+              orderModeOptions.map((mode) => (
+                <MenuItem key={mode} value={mode}>
+                  {mode}
+                </MenuItem>
+              ))
+            ) : (
+              <MenuItem disabled>Loading...</MenuItem>
+            )}
           </Select>
         </FormControl>
 
-        {/* Payment Mode */}
+        {/* Mode of Payment */}
         <Box>
           {paymentModes.map((mode, index) => (
             <Box
@@ -170,23 +202,23 @@ export default function CustomerDetails({ data, onChange }: Props) {
                     selected ? (
                       selected
                     ) : (
-                      <span style={{ color: "#9e9e9e" }}>
-                        Select payment mode
-                      </span>
+                      <span style={{ color: "#9e9e9e" }}>Select payment mode</span>
                     )
                   }
                 >
-                  <MenuItem value="Cash">Cash</MenuItem>
-                  <MenuItem value="GCash">GCash</MenuItem>
-                  <MenuItem value="Credit Card">Credit Card</MenuItem>
-                  <MenuItem value="PayPal">PayPal</MenuItem>
-                  <MenuItem value="Other">Other</MenuItem>
+                  {paymentModeOptions.length > 0 ? (
+                    paymentModeOptions.map((option) => (
+                      <MenuItem key={option} value={option}>
+                        {option}
+                      </MenuItem>
+                    ))
+                  ) : (
+                    <MenuItem disabled>Loading...</MenuItem>
+                  )}
                 </Select>
               </FormControl>
               {paymentModes.length > 1 && (
-                <IconButton
-                  onClick={() => handleRemovePaymentMode(index)}
-                >
+                <IconButton onClick={() => handleRemovePaymentMode(index)}>
                   <DeleteIcon />
                 </IconButton>
               )}
@@ -196,16 +228,16 @@ export default function CustomerDetails({ data, onChange }: Props) {
           <Button
             startIcon={<AddCardIcon />}
             onClick={handleAddPaymentMode}
-            sx={{ 
+            sx={{
               alignSelf: "flex-start",
-                  color: "#ec7a1c",
-                  borderColor: "#ec7a1c",
-                  padding: '6px 16px', 
-                    "&:hover": { 
-                      backgroundColor: "#ec7a1c",
-                      color: "white",
-                      borderColor: "#ec7a1c",
-                    },
+              color: "#ec7a1c",
+              borderColor: "#ec7a1c",
+              padding: "6px 16px",
+              "&:hover": {
+                backgroundColor: "#ec7a1c",
+                color: "white",
+                borderColor: "#ec7a1c",
+              },
             }}
           >
             Add Another Mode
@@ -213,5 +245,5 @@ export default function CustomerDetails({ data, onChange }: Props) {
         </Box>
       </div>
     </div>
-  )
+  );
 }
