@@ -51,34 +51,31 @@ function sqlValue(value) {
   return `'${String(value).replace(/'/g, "''")}'`;
 }
 
-// Get primary key of a table dynamically from Snowflake
-async function getPrimaryKey(tableName) {
-  const sql = `
-    SELECT COLUMN_NAME
-    FROM INFORMATION_SCHEMA.COLUMNS
-    WHERE TABLE_SCHEMA = '${process.env.SNOWFLAKE_SCHEMA.toUpperCase()}'
-      AND TABLE_NAME = '${tableName.toUpperCase()}'
-      AND COLUMN_KEY = 'PRIMARY'
-  `;
+// -------------------- Manual Primary Keys --------------------
+const primaryKeys = {
+  raw_orders: 'raw_order_id',
+  raw_menu: 'id',
+  raw_receipt: 'id',
+  customers: 'id',
+  category: 'id',
+  category_sizes: 'id',
+  menu_items: 'id',
+  menu_item_variants: 'id',
+  medium: 'id',
+  mop: 'id',
+  mop_items: 'id',
+  orders: 'id',
+  order_items: 'id',
+  receipt_totals: 'id',
+  packed_meals: 'id',
+  packed_meal_items: 'id',
+};
 
-  try {
-    const rows = await executeQuery(sql);
-    if (!rows || rows.length === 0) {
-      console.warn(`⚠️ No primary key found for ${tableName}, defaulting to "id"`);
-      return 'id';
-    }
-    return rows[0].COLUMN_NAME;
-  } catch (err) {
-    console.warn(`⚠️ Error fetching primary key for ${tableName}:`, err.message);
-    return 'id';
-  }
-}
-
-// Setup realtime listener dynamically
+// -------------------- Realtime Listener --------------------
 async function setupRealtimeSync(tableName) {
   console.log(`🔍 Listening for changes on ${tableName}...`);
 
-  const pk = await getPrimaryKey(tableName);
+  const pk = primaryKeys[tableName] || 'id';
 
   supabase
     .channel(`realtime:${tableName}`)
