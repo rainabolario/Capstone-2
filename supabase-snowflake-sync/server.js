@@ -1,8 +1,9 @@
 import 'dotenv/config';
+import express from 'express';
 import { createClient } from '@supabase/supabase-js';
 import snowflake from 'snowflake-sdk';
 
-// 🧩 Connect to Supabase with service key (for realtime + write access)
+// 🧩 Connect to Supabase
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -53,7 +54,7 @@ function sqlValue(value) {
   return `'${String(value).replace(/'/g, "''")}'`;
 }
 
-// 🎧 Setup realtime listener for a specific table
+// 🎧 Setup realtime listener for a table
 async function setupRealtimeSync(tableName) {
   console.log(`🔍 Listening for changes on ${tableName}...`);
 
@@ -126,4 +127,13 @@ async function main() {
   console.log('🚀 Realtime sync active. Listening for Supabase changes...');
 }
 
-main();
+// --- Express server just to bind a port ---
+const app = express();
+app.get('/', (req, res) => res.send('Supabase → Snowflake Realtime Sync Running'));
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`🌐 Server bound to port ${PORT} (required for web service deployment)`);
+  // Start main realtime sync after server is up
+  main();
+});

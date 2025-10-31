@@ -141,7 +141,7 @@ const tablesOrder = [
   'receipt_totals',
   'packed_meals',
   'packed_meal_items',
-];
+]; 
 
 // Main sync
 async function syncAllSupabaseToSnowflake() {
