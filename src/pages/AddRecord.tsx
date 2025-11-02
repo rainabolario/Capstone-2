@@ -109,8 +109,8 @@ export default function AddRecord({ onLogout }: AddRecordProps) {
           item_size: item.size,
           order_type: item.category,
           quantity: item.qty,
-          medium_y: formData.customer.orderMode,
-          mop_y: formData.customer.paymentMode,
+          medium: formData.customer.orderMode,
+          mop: formData.customer.paymentMode,
         }
 
         const { error } = await supabase.from("raw_orders").insert([rawOrder])

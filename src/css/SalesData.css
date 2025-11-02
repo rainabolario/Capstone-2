@@ -128,6 +128,7 @@
   margin-bottom: 24px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   scrollbar-color: #ec7a1c #f9f9fa; 
+  height: 75vh;
 }
 
 .sales-table {
@@ -222,4 +223,71 @@
   .action-buttons{
     flex-wrap: wrap;
   }
+}
+
+/* Pagination Styling */
+
+/* Sticky footer inside the scrollable area */
+.sales-table tfoot {
+  position: sticky;
+  bottom: 0;
+  background: white;
+  z-index: 2;
+  box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.sales-table tfoot td {
+  padding: 0;
+  border-top: 1px solid #e5e7eb;
+  text-align: center;
+}
+
+/* Pagination controls layout */
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  font-size: 13px;
+  background-color: #fff;
+}
+
+/* Info text */
+.pagination-info {
+  color: #444;
+}
+
+/* Page number input */
+.pagination-input {
+  width: 60px;
+  text-align: center;
+  padding: 4px 6px;
+  border-radius: 5px;
+  border: 1.5px solid var(--orange);
+}
+
+/* Pagination buttons */
+.pagination-button {
+  padding: 4px 8px;
+  border-radius: 5px;
+  border: 1px solid var(--orange);
+  background-color: #fff;
+  color: var(--orange);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pagination-button:hover:not(:disabled) {
+  background-color: var(--orange);
+  color: white;
+}
+
+.pagination-button:disabled {
+  background-color: #f3f4f6;
+  color: #bbb;
+}
+
+.pagination-summary {
+  color: #666;
 }

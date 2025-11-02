@@ -21,7 +21,11 @@ interface SalesRecord {
   total: number;
 }
 
-const ArchivedData: React.FC = () => {
+interface Props {
+  fetchSalesData: () => Promise<void>; // passed from SalesData page
+}
+
+const ArchivedData: React.FC<Props> = ({ fetchSalesData }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [salesData, setSalesData] = useState<SalesRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,9 +34,26 @@ const ArchivedData: React.FC = () => {
 
   useEffect(() => {
     fetchArchived();
+
+    // Realtime listener for other clients
+    const channel = supabase
+      .channel("orders-realtime")
+      .on(
+        "broadcast",
+        { event: "refresh_sales_data" },
+        async () => {
+          await fetchArchived();
+          await fetchSalesData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
-  // ✅ Fetch archived (inactive) records from "orders"
+  // ✅ Fetch archived records
   const fetchArchived = async () => {
     setLoading(true);
 
@@ -43,19 +64,18 @@ const ArchivedData: React.FC = () => {
         order_date,
         order_time,
         order_mode,
-        medium_y,
-        payment_mode,
         total_amount,
-        is_active,
-        customers ( name ),
-        order_items (
+        customers(name),
+        medium:medium_id(name),
+        mop:mop_id(name),
+        order_items(
           id,
           quantity,
           subtotal,
-          variant_id (
+          variant_id(
             id,
-            menu_items ( name ),
-            category_sizes ( size )
+            menu_items(name),
+            category_sizes(size)
           )
         )
       `)
@@ -64,6 +84,7 @@ const ArchivedData: React.FC = () => {
 
     if (error) {
       console.error("Error fetching archived data:", error);
+      setSalesData([]);
     } else {
       const formatted: SalesRecord[] = (data || []).flatMap((order: any) =>
         (order.order_items || []).map((item: any) => ({
@@ -72,41 +93,37 @@ const ArchivedData: React.FC = () => {
           time: order.order_time || "",
           date: order.order_date || "",
           day: order.order_date
-            ? new Date(order.order_date).toLocaleDateString("en-US", {
-                weekday: "long",
-              })
+            ? new Date(order.order_date).toLocaleDateString("en-US", { weekday: "long" })
             : "",
           item: item.variant_id?.menu_items?.name || "N/A",
           itemSize: item.variant_id?.category_sizes?.size || "N/A",
           orderType: order.order_mode || "N/A",
           quantity: item.quantity || 0,
-          medium: order.medium_y || "N/A",
-          mop: order.payment_mode || "N/A",
+          medium: order.medium?.name || "N/A",
+          mop: order.mop?.name || "N/A",
           total: item.subtotal || order.total_amount || 0,
         }))
       );
-
       setSalesData(formatted);
     }
 
     setLoading(false);
   };
 
-  // ✅ Toggle checkbox selection
+  // ✅ Toggle checkbox
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
   };
 
-  // ✅ Restore archived records (make active again)
+  // ✅ Restore archived records
   const handleRestore = async () => {
     if (selectedIds.length === 0) {
       alert("Please select at least one record to restore.");
       return;
     }
 
-    // extract base order IDs (before the "-itemid")
     const orderIds = Array.from(
       new Set(selectedIds.map((id) => Number(id.split("-")[0])))
     );
@@ -122,16 +139,21 @@ const ArchivedData: React.FC = () => {
     } else {
       alert("Records restored successfully!");
       setSelectedIds([]);
-      await fetchArchived();
 
+      // Refresh both tables
+      await fetchArchived();
+      await fetchSalesData();
+
+      // Realtime broadcast
       await supabase.channel("orders-realtime").send({
         type: "broadcast",
         event: "refresh_sales_data",
+        payload: { message: "records restored" },
       });
     }
   };
 
-  // ✅ Search filter
+  // ✅ Filtered search
   const filteredData = salesData.filter((record) =>
     Object.values(record).some((val) =>
       String(val).toLowerCase().includes(searchTerm.toLowerCase())
@@ -146,7 +168,6 @@ const ArchivedData: React.FC = () => {
     <div style={{ display: "flex", minHeight: "100vh" }}>
       <Sidebar onLogout={onLogout} />
       <div className="archived-data-container">
-        {/* Header Section */}
         <div className="archived-header-section">
           <div className="header-left">
             <h1 className="archived-page-title">ARCHIVED DATA</h1>
@@ -162,7 +183,6 @@ const ArchivedData: React.FC = () => {
         </Typography>
         <Divider />
 
-        {/* Action Bar */}
         <div className="archived-action-bar">
           <div className="archived-search-container">
             <input
@@ -196,7 +216,6 @@ const ArchivedData: React.FC = () => {
           </Button>
         </div>
 
-        {/* Data Table */}
         <div className="archived-table-container">
           {loading ? (
             <p>Loading archived records...</p>
