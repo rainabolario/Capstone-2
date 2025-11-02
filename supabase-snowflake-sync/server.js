@@ -1,16 +1,16 @@
 import 'dotenv/config';
-import express from 'express';
 import { createClient } from '@supabase/supabase-js';
 import snowflake from 'snowflake-sdk';
+import express from 'express';
 
-// -------------------- Supabase --------------------
+// -------------------- Supabase Realtime --------------------
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-// -------------------- Snowflake --------------------
-const connection = snowflake.createConnection({
+// -------------------- Snowflake Connection --------------------
+const sfConnection = snowflake.createConnection({
   account: process.env.SNOWFLAKE_ACCOUNT,
   username: process.env.SNOWFLAKE_USER,
   password: process.env.SNOWFLAKE_PASSWORD,
@@ -19,31 +19,15 @@ const connection = snowflake.createConnection({
   schema: process.env.SNOWFLAKE_SCHEMA,
 });
 
-// Connect Snowflake
-function connectSnowflake() {
-  return new Promise((resolve, reject) => {
-    connection.connect((err, conn) => {
-      if (err) return reject(err);
-      console.log('✅ Connected to Snowflake');
-      resolve(conn);
-    });
+await new Promise((resolve, reject) => {
+  sfConnection.connect((err) => {
+    if (err) return reject(err);
+    console.log('✅ Connected to Snowflake');
+    resolve();
   });
-}
+});
 
-// Execute SQL safely
-function executeQuery(sql) {
-  return new Promise((resolve, reject) => {
-    connection.execute({
-      sqlText: sql,
-      complete: (err, stmt, rows) => {
-        if (err) return reject(err);
-        resolve(rows);
-      },
-    });
-  });
-}
-
-// Escape SQL values safely
+// -------------------- Helper Functions --------------------
 function sqlValue(value) {
   if (value === null || value === undefined) return 'NULL';
   if (typeof value === 'number') return value;
@@ -51,114 +35,118 @@ function sqlValue(value) {
   return `'${String(value).replace(/'/g, "''")}'`;
 }
 
-// -------------------- Manual Primary Keys --------------------
-const primaryKeys = {
-  raw_orders: 'raw_order_id',
-  raw_menu: 'id',
-  raw_receipt: 'id',
-  customers: 'id',
-  category: 'id',
-  category_sizes: 'id',
-  menu_items: 'id',
-  menu_item_variants: 'id',
-  medium: 'id',
-  mop: 'id',
-  mop_items: 'id',
-  orders: 'id',
-  order_items: 'id',
-  receipt_totals: 'id',
-  packed_meals: 'id',
-  packed_meal_items: 'id',
+function columnsList(row) {
+  return Object.keys(row).map(c => `"${c.toUpperCase()}"`).join(',');
+}
+
+function valuesList(row) {
+  return Object.values(row).map(sqlValue).join(',');
+}
+
+function updatesList(row) {
+  return Object.entries(row).map(([c,v]) => `"${c.toUpperCase()}" = ${sqlValue(v)}`).join(',');
+}
+
+function executeSnowflake(sql) {
+  return new Promise((resolve, reject) => {
+    sfConnection.execute({
+      sqlText: sql,
+      complete: (err, stmt, rows) => err ? reject(err) : resolve(rows)
+    });
+  });
+}
+
+// -------------------- Snowflake Table Columns --------------------
+const snowflakeColumns = {
+  raw_orders: ['RAW_ORDER_ID','NAME','DATE','TIME','ITEM','ITEM_SIZE','ORDER_TYPE','QUANTITY','MEDIUM','MOP'],
+  customers: ['ID','NAME'],
+  medium: ['ID','NAME'],
+  mop: ['ID','NAME','IS_COMBO'],
+  mop_items: ['ID','MOP_ID','ITEM_ID'],
+  category: ['ID','NAME'],
+  category_sizes: ['ID','CATEGORY_ID','SIZE'],
+  menu_items: ['ID','NAME','CATEGORY_ID'],
+  menu_item_variants: ['ID','MENU_ITEM_ID','SIZE_ID','PRICE'],
+  orders: ['ID','CUSTOMER_ID','ORDER_DATE','ORDER_TIME','MOP_ID','MEDIUM_ID','ORDER_MODE','TOTAL_AMOUNT'],
+  order_items: ['ID','ORDER_ID','VARIANT_ID','QUANTITY','SUBTOTAL'],
+  receipt_totals: ['ID','ORDER_ID','RECEIPT_DATE','RECEIPT_TOTAL'],
+  packed_meals: ['ID','NAME'],
+  packed_meal_items: ['ID','PACKED_MEAL_ID','MENU_ITEM_ID']
 };
 
-// -------------------- Realtime Listener --------------------
-async function setupRealtimeSync(tableName) {
-  console.log(`🔍 Listening for changes on ${tableName}...`);
+// -------------------- Filter Row --------------------
+function filterRow(row, table) {
+  if (!row) return {};
+  const allowed = snowflakeColumns[table];
+  if (!allowed) return {};
+  return Object.fromEntries(
+    Object.entries(row).filter(([k]) => allowed.includes(k.toUpperCase()))
+  );
+}
 
-  const pk = primaryKeys[tableName] || 'id';
+// -------------------- Mirror Function --------------------
+async function mirrorChange(event, table, newRow, oldRow) {
+  const tablePK = {
+    raw_orders: 'raw_order_id', customers: 'id', medium: 'id', mop: 'id',
+    mop_items: 'id', category: 'id', category_sizes: 'id',
+    menu_items: 'id', menu_item_variants: 'id', orders: 'id',
+    order_items: 'id', receipt_totals: 'id', packed_meals: 'id',
+    packed_meal_items: 'id'
+  };
+  const pk = tablePK[table];
+  if (!pk) return;
 
+  const filteredNew = filterRow(newRow, table);
+  const filteredOld = filterRow(oldRow, table);
+
+  let sql = '';
+  if (event === 'INSERT' && filteredNew) {
+    sql = `INSERT INTO "${table.toUpperCase()}" (${columnsList(filteredNew)}) VALUES (${valuesList(filteredNew)});`;
+  } else if (event === 'UPDATE' && filteredNew && filteredOld) {
+    sql = `UPDATE "${table.toUpperCase()}" SET ${updatesList(filteredNew)} WHERE "${pk.toUpperCase()}" = ${sqlValue(filteredOld[pk])};`;
+  } else if (event === 'DELETE' && filteredOld) {
+    sql = `DELETE FROM "${table.toUpperCase()}" WHERE "${pk.toUpperCase()}" = ${sqlValue(filteredOld[pk])};`;
+  }
+
+  if (sql) {
+    try {
+      await executeSnowflake(sql);
+      console.log(`✅ Mirrored ${event} on ${table} to Snowflake`);
+    } catch (err) {
+      console.error(`❌ Error mirroring ${table}:`, err.message);
+    }
+  }
+}
+
+// -------------------- Realtime Subscription --------------------
+const tables = Object.keys(snowflakeColumns);
+
+tables.forEach(table => {
   supabase
-    .channel(`realtime:${tableName}`)
+    .channel(`realtime-${table}`)
     .on(
       'postgres_changes',
-      { event: '*', schema: 'public', table: tableName },
+      { event: '*', schema: 'public', table },
       async (payload) => {
-        const eventType = payload.eventType || payload.type;
-        const newRow = payload.new;
-        const oldRow = payload.old;
-
-        console.log(`🔔 [${tableName}] Event: ${eventType}`, payload);
-
-        try {
-          if (eventType === 'INSERT') {
-            const columns = Object.keys(newRow);
-            const values = columns.map(c => sqlValue(newRow[c])).join(', ');
-            const sql = `INSERT INTO "${tableName.toUpperCase()}" (${columns.join(', ')}) VALUES (${values});`;
-            await executeQuery(sql);
-            console.log(`🟢 Inserted row into ${tableName}`);
-          } else if (eventType === 'UPDATE') {
-            const updates = Object.keys(newRow)
-              .map(c => `${c} = ${sqlValue(newRow[c])}`)
-              .join(', ');
-            const sql = `UPDATE "${tableName.toUpperCase()}" SET ${updates} WHERE ${pk} = ${sqlValue(oldRow[pk])};`;
-            await executeQuery(sql);
-            console.log(`🟡 Updated row #${oldRow[pk]} in ${tableName}`);
-          } else if (eventType === 'DELETE') {
-            const sql = `DELETE FROM "${tableName.toUpperCase()}" WHERE ${pk} = ${sqlValue(oldRow[pk])};`;
-            await executeQuery(sql);
-            console.log(`🔴 Deleted row #${oldRow[pk]} from ${tableName}`);
-          }
-        } catch (err) {
-          console.error(`❌ Error syncing ${tableName}:`, err.message);
-        }
+        const { eventType, new: newRow, old: oldRow } = payload;
+        await mirrorChange(eventType.toUpperCase(), table, newRow, oldRow);
       }
     )
     .subscribe((status) => {
-      if (status === 'SUBSCRIBED') {
-        console.log(`✅ Subscribed to realtime updates for ${tableName} (PK: ${pk})`);
-      }
+      if (status === 'SUBSCRIBED') console.log(`🔔 Listening to Realtime on ${table}`);
     });
-}
-
-// -------------------- Main --------------------
-async function main() {
-  await connectSnowflake();
-
-  const tables = [
-    'raw_orders',
-    'raw_menu',
-    'raw_receipt',
-    'customers',
-    'category',
-    'category_sizes',
-    'menu_items',
-    'menu_item_variants',
-    'medium',
-    'mop',
-    'mop_items',
-    'orders',
-    'order_items',
-    'receipt_totals',
-    'packed_meals',
-    'packed_meal_items',
-  ];
-
-  for (const table of tables) {
-    setupRealtimeSync(table);
-  }
-
-  console.log('🚀 Realtime sync active');
-}
-
-// -------------------- Express Server --------------------
-const app = express();
-
-app.get('/', (req, res) => {
-  res.send('Supabase → Snowflake Realtime Sync Running');
 });
 
+console.log('🌐 Supabase → Snowflake mirror running...');
+
+// -------------------- Express Server for Render --------------------
+const app = express();
 const PORT = process.env.PORT || 3000;
+
+app.get('/', (req, res) => {
+  res.send('Supabase → Snowflake mirror is running ✅');
+});
+
 app.listen(PORT, () => {
-  console.log(`🌐 Server running on port ${PORT}`);
-  main();
+  console.log(`🟢 Server listening on port ${PORT}`);
 });
