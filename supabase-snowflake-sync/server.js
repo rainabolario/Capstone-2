@@ -44,21 +44,23 @@ function valuesList(row) {
 }
 
 function updatesList(row) {
-  return Object.entries(row).map(([c,v]) => `"${c.toUpperCase()}" = ${sqlValue(v)}`).join(',');
+  return Object.entries(row)
+    .map(([c, v]) => `"${c.toUpperCase()}" = ${sqlValue(v)}`)
+    .join(',');
 }
 
 function executeSnowflake(sql) {
   return new Promise((resolve, reject) => {
     sfConnection.execute({
       sqlText: sql,
-      complete: (err, stmt, rows) => err ? reject(err) : resolve(rows)
+      complete: (err, stmt, rows) => (err ? reject(err) : resolve(rows)),
     });
   });
 }
 
 // -------------------- Snowflake Table Columns --------------------
 const snowflakeColumns = {
-  raw_orders: ['RAW_ORDER_ID','NAME','DATE','TIME','ITEM','ITEM_SIZE','ORDER_TYPE','QUANTITY','MEDIUM','MOP'],
+  raw_orders: ['RAW_ORDER_ID','NAME','DATE','TIME','DAY','ITEM','ITEM_SIZE','ORDER_TYPE','QUANTITY','MEDIUM','MOP'],
   customers: ['ID','NAME'],
   medium: ['ID','NAME'],
   mop: ['ID','NAME','IS_COMBO'],
@@ -99,6 +101,12 @@ async function mirrorChange(event, table, newRow, oldRow) {
   const filteredNew = filterRow(newRow, table);
   const filteredOld = filterRow(oldRow, table);
 
+  // -------------------- Auto-fill DAY for raw_orders --------------------
+  if (table === 'raw_orders' && filteredNew?.DATE && !filteredNew?.DAY) {
+    const daySql = `TO_CHAR(${sqlValue(filteredNew.DATE)}, 'FMDay')`;
+    filteredNew.DAY = `(${daySql})`; // Snowflake expression
+  }
+
   let sql = '';
   if (event === 'INSERT' && filteredNew) {
     sql = `INSERT INTO "${table.toUpperCase()}" (${columnsList(filteredNew)}) VALUES (${valuesList(filteredNew)});`;
@@ -114,6 +122,28 @@ async function mirrorChange(event, table, newRow, oldRow) {
       console.log(`✅ Mirrored ${event} on ${table} to Snowflake`);
     } catch (err) {
       console.error(`❌ Error mirroring ${table}:`, err.message);
+    }
+  }
+
+  // -------------------- Recalculate total_amount for orders --------------------
+  if (table === 'order_items') {
+    const orderId = filteredNew?.ORDER_ID ?? filteredOld?.ORDER_ID;
+    if (orderId) {
+      const updateTotal = `
+        UPDATE ORDERS o
+        SET TOTAL_AMOUNT = (
+          SELECT COALESCE(SUM(subtotal),0)
+          FROM ORDER_ITEMS
+          WHERE order_id = ${sqlValue(orderId)}
+        )
+        WHERE o.ID = ${sqlValue(orderId)};
+      `;
+      try {
+        await executeSnowflake(updateTotal);
+        console.log(`🔄 Recalculated TOTAL_AMOUNT for order ${orderId}`);
+      } catch (err) {
+        console.error(`❌ Error updating TOTAL_AMOUNT for order ${orderId}:`, err.message);
+      }
     }
   }
 }
