@@ -90,7 +90,7 @@ const snowflakeColumns = {
   category_sizes: ['ID','CATEGORY_ID','SIZE'],
   menu_items: ['ID','NAME','CATEGORY_ID'],
   menu_item_variants: ['ID','MENU_ITEM_ID','SIZE_ID','PRICE'],
-  orders: ['ID','CUSTOMER_ID','ORDER_DATE','ORDER_TIME','MOP_ID','MEDIUM_ID','ORDER_MODE','TOTAL_AMOUNT'],
+  orders: ['ID','CUSTOMER_ID','ORDER_DATE','ORDER_TIME','MOP_ID','MEDIUM_ID','ORDER_MODE','TOTAL_AMOUNT','IS_ACTIVE'],
   order_items: ['ID','ORDER_ID','VARIANT_ID','QUANTITY','SUBTOTAL'],
   receipt_totals: ['ID','ORDER_ID','RECEIPT_DATE','RECEIPT_TOTAL'],
   packed_meals: ['ID','NAME'],
@@ -127,6 +127,12 @@ async function mirrorChange(event, table, newRow, oldRow) {
     const d = new Date(filteredNew.DATE);
     const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
     filteredNew.DAY = dayNames[d.getUTCDay()];
+  }
+
+  // -------------------- Handle archive --------------------
+  // If a record is being archived, force is_active = FALSE
+  if (event === 'UPDATE' && filteredNew?.is_active === false) {
+    filteredNew.is_active = false; // ensure mirrored in Snowflake
   }
 
   let sql = '';
