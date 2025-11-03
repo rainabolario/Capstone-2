@@ -1,11 +1,10 @@
 import type React from "react";
 import { useState } from "react";
-import { useNavigate} from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import "../css/login.css";
-import { supabase } from "../supabaseClient";
 
 interface LoginProps {
-  onLogin: (email: string, role: string) => void; 
+  onLogin: (email: string, role: string) => void;
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
@@ -20,49 +19,32 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     e.preventDefault();
     setError("");
     setLoading(true);
-    
+
     try {
-      // Sign in user with Supabase
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (signInError) {
-        if (signInError.message.includes("Email not confirmed")) {
-          setError("Please confirm your email before logging in.");
-        } else {
-          setError("Invalid credentials. Please try again.");
-        }
+      // ⚠️ BYPASS AUTH — always allow login
+      // Optional: simple validation to avoid empty fields
+      if (!email || !password) {
+        setError("Please enter both email and password.");
         setLoading(false);
         return;
       }
 
-      // Fetch user info from 'users' table
-      const { data: userData, error: fetchError } = await supabase
-        .from("users")
-        .select("id, role")
-        .eq("email", email)
-        .maybeSingle(); 
+      // Simulate a short delay (optional)
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
-      if (fetchError || !userData) {
-        setError("User not found. Please contact admin.");
-        setLoading(false);
-        return;
-      }
+      // Default role (or you can hardcode "Admin" for now)
+      const userRole = "Admin";
 
-      const userId = userData.id;
-      const userRole = userData.role || "Staff";
-
-      // Store session info locally
-      localStorage.setItem("userId", userId);
-      localStorage.setItem("userRole", userRole);
+      // Store mock session
       localStorage.setItem("userEmail", email);
+      localStorage.setItem("userRole", userRole);
+      localStorage.setItem("userId", "mock-user-id");
 
+      // Notify parent + redirect
       onLogin(email, userRole);
       navigate("/salesoverview");
-    } catch (err: any) {
-      console.error("Login error:", err);
+    } catch (err) {
+      console.error("Bypass login error:", err);
       setError("Something went wrong. Please try again.");
     }
 
@@ -74,7 +56,9 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       <div className="header-bar">
         <img src="/Kc's lola-logo.png" alt="KC's Kitchen Logo" className="header-logo" />
         <span>{"KC's Kitchen"}</span>
-        <a href="/need-help" className="need-help-link">Need Help?</a>
+        <a href="/need-help" className="need-help-link">
+          Need Help?
+        </a>
       </div>
 
       <div className="login-container">
