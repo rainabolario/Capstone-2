@@ -2,6 +2,7 @@ import type React from "react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../css/login.css";
+import { supabase } from '../supabaseClient';
 
 interface LoginProps {
   onLogin: (email: string, role: string) => void;
@@ -20,31 +21,35 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     setError("");
     setLoading(true);
 
-    try {
-      // ⚠️ BYPASS AUTH — always allow login
-      // Optional: simple validation to avoid empty fields
-      if (!email || !password) {
-        setError("Please enter both email and password.");
+try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email,
+        password: password,
+      });
+
+      if (error) {
+        setError(error.message); 
         setLoading(false);
         return;
       }
 
-      // Simulate a short delay (optional)
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      const { data: profile } = await supabase
+      .from('users') // Your public.users table
+      .select('role')
+      .eq('id', data.user.id) // Get profile matching the logged-in user's ID
+      .single();
+      
+      const userRole = profile?.role || 'Staff'; // Default to 'Staff' if role not found
 
-      // Default role (or you can hardcode "Admin" for now)
-      const userRole = "Admin";
+      if (data.user && data.user.email) {
+        onLogin(data.user.email, userRole);
+        navigate("/salesoverview");
+      } else {
+        setError("Login successful, but user email is not available.");
+      }
 
-      // Store mock session
-      localStorage.setItem("userEmail", email);
-      localStorage.setItem("userRole", userRole);
-      localStorage.setItem("userId", "mock-user-id");
-
-      // Notify parent + redirect
-      onLogin(email, userRole);
-      navigate("/salesoverview");
     } catch (err) {
-      console.error("Bypass login error:", err);
+      console.error("Login error:", err);
       setError("Something went wrong. Please try again.");
     }
 
