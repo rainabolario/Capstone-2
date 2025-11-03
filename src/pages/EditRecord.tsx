@@ -31,6 +31,7 @@ interface VariantOption {
   id: number
   name: string
   size: string
+  price: number
 }
 
 interface MediumOption {
@@ -47,6 +48,7 @@ interface VariantData {
   id: number
   menu_items?: { name: string | null } | null
   category_sizes?: { size: string | null } | null
+  price?: number
 }
 
 interface OrderItemData {
@@ -76,11 +78,11 @@ const EditRecord: React.FC = () => {
   const location = useLocation()
   const [record, setRecord] = useState<SalesRecord | null>(null)
   const [loading, setLoading] = useState(true)
-
   const [variants, setVariants] = useState<VariantOption[]>([])
   const [mediums, setMediums] = useState<MediumOption[]>([])
   const [mops, setMops] = useState<MOPOption[]>([])
   const [orderTypes, setOrderTypes] = useState<string[]>([])
+  const [unitPrice, setUnitPrice] = useState<number>(0)
 
   // ==============================
   // 🟠 Load record data
@@ -113,6 +115,7 @@ const EditRecord: React.FC = () => {
               subtotal,
               variant_id (
                 id,
+                price,
                 menu_items ( name ),
                 category_sizes ( size )
               )
@@ -127,6 +130,9 @@ const EditRecord: React.FC = () => {
         const orderItems = data.order_items ?? []
         const orderItem = orderItems.find((oi: OrderItemData) => oi.id === orderItemId)
         if (!orderItem) throw new Error("Order item not found")
+
+        const price = orderItem.variant_id?.price ?? 0
+        setUnitPrice(price)
 
         const normalizedRecord: SalesRecord = {
           id: `${data.id}-${orderItem.id}`,
@@ -169,6 +175,7 @@ const EditRecord: React.FC = () => {
           .from("menu_item_variants")
           .select(`
             id,
+            price,
             menu_items ( name ),
             category_sizes ( size )
           `)) as unknown as { data: VariantData[] | null; error: any }
@@ -179,6 +186,7 @@ const EditRecord: React.FC = () => {
             id: v.id,
             name: v.menu_items?.name ?? "",
             size: v.category_sizes?.size ?? "",
+            price: v.price ?? 0,
           }))
         )
 
@@ -199,43 +207,39 @@ const EditRecord: React.FC = () => {
   }, [])
 
   // ==============================
-  // 🟠 Handle field changes (fixed prev issue)
+  // 🟠 Handle field changes
   // ==============================
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
 
     setRecord((prev) => {
       if (!prev) return prev
+      const updated: SalesRecord = { ...prev }
 
-      const updated: SalesRecord = { ...prev, [name]: value }
-
-      if (name === "date") {
-        updated.day = new Date(value).toLocaleDateString("en-US", { weekday: "long" })
-      }
-
-      if (name === "item" || name === "item_size") {
+      if (name === "quantity") {
+        const quantity = Number(value)
+        updated.quantity = quantity
+        updated.total_amount = unitPrice * quantity
+      } else if (name === "item" || name === "item_size") {
+        updated[name] = value
         const variant = variants.find(
           (v) =>
             v.name === (name === "item" ? value : prev.item) &&
             v.size === (name === "item_size" ? value : prev.item_size)
         )
-        if (variant) updated.variant_id = variant.id
+        if (variant) {
+          updated.variant_id = variant.id
+          setUnitPrice(variant.price)
+          updated.total_amount = variant.price * prev.quantity
+        }
+      } else if (name === "total_amount") {
+        updated.total_amount = Number(value)
+      } else {
+        updated[name] = value
       }
 
-      if (name === "medium") {
-        const medium = mediums.find((m) => m.name === value)
-        updated.medium_id = medium?.id ?? null
-        updated.medium = medium?.name ?? prev.medium
-      }
-
-      if (name === "mop") {
-        const mop = mops.find((m) => m.name === value)
-        updated.mop_id = mop?.id ?? null
-        updated.mop = mop?.name ?? prev.mop
-      }
-
-      if (name === "quantity" || name === "total_amount") {
-        (updated as any)[name] = Number(value)
+      if (name === "date") {
+        updated.day = new Date(value).toLocaleDateString("en-US", { weekday: "long" })
       }
 
       return updated
@@ -252,6 +256,7 @@ const EditRecord: React.FC = () => {
       const orderId = Number(record.id.split("-")[0])
       const orderItemId = Number(record.id.split("-")[1])
 
+      // Update customer name
       const { data: orderData } = await supabase
         .from("orders")
         .select("customer_id")
@@ -264,32 +269,51 @@ const EditRecord: React.FC = () => {
 
       if (!record.variant_id) throw new Error("Item not found")
 
+      // Update order_items
       await supabase.from("order_items").update({
-        quantity: Number(record.quantity),
-        subtotal: Number(record.total_amount),
+        quantity: record.quantity,
+        subtotal: record.total_amount,
         variant_id: record.variant_id,
       }).eq("id", orderItemId)
 
+      // Update orders
       await supabase.from("orders").update({
         order_mode: record.order_type,
         medium_id: record.medium_id,
         mop_id: record.mop_id,
-        total_amount: Number(record.total_amount),
+        total_amount: record.total_amount,
       }).eq("id", orderId)
 
-      await supabase.from("raw_orders").update({
-        name: record.name,
-        date: record.date,
-        time: record.time,
-        day: record.day,
-        item: record.item,
-        item_size: record.item_size,
-        order_type: record.order_type,
-        quantity: record.quantity,
-        medium: record.medium,
-        mop: record.mop,
-      }).eq("raw_order_id", orderId)
+      // ==============================
+      // Update raw_orders using composite match
+      // ==============================
+      const { data: rawData, error: rawError } = await supabase
+        .from("raw_orders")
+        .update({
+          name: record.name,
+          date: record.date,
+          time: record.time,
+          day: record.day,
+          item: record.item,
+          item_size: record.item_size,
+          order_type: record.order_type,
+          quantity: record.quantity,
+          total_amount: record.total_amount,
+          medium: record.medium,
+          mop: record.mop,
+        })
+        .match({
+          name: record.name,
+          date: record.date,
+          time: record.time,
+          item: record.item,
+          item_size: record.item_size,
+        })
 
+      if (rawError) console.error("❌ Raw Orders Update Error:", rawError)
+      else console.log("✅ Raw Orders Updated:", rawData)
+
+      // Update receipt totals
       const { data: existingReceipt } = await supabase
         .from("receipt_totals")
         .select("id")
@@ -298,7 +322,7 @@ const EditRecord: React.FC = () => {
 
       if (existingReceipt) {
         await supabase.from("receipt_totals").update({
-          receipt_total: Number(record.total_amount),
+          receipt_total: record.total_amount,
         }).eq("order_id", orderId)
       } else {
         const today = new Date().toISOString().split("T")[0]
@@ -306,7 +330,7 @@ const EditRecord: React.FC = () => {
           {
             order_id: orderId,
             receipt_date: today,
-            receipt_total: Number(record.total_amount),
+            receipt_total: record.total_amount,
           },
         ])
       }
@@ -376,9 +400,7 @@ const EditRecord: React.FC = () => {
             <div className="form-row">
               <TextField select label="Order Type" name="order_type" value={record.order_type} onChange={handleChange} className="form-field" SelectProps={{ MenuProps: menuProps }}>
                 {orderTypes.map((type) => (
-                  <MenuItem key={type} value={type}>
-                    {type}
-                  </MenuItem>
+                  <MenuItem key={type} value={type}>{type}</MenuItem>
                 ))}
               </TextField>
 
