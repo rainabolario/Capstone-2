@@ -10,22 +10,31 @@ const supabase = createClient(
 );
 
 // -------------------- Snowflake Connection --------------------
-const sfConnection = snowflake.createConnection({
-  account: process.env.SNOWFLAKE_ACCOUNT,
-  username: process.env.SNOWFLAKE_USER,
-  password: process.env.SNOWFLAKE_PASSWORD,
-  warehouse: process.env.SNOWFLAKE_WAREHOUSE,
-  database: process.env.SNOWFLAKE_DATABASE,
-  schema: process.env.SNOWFLAKE_SCHEMA,
-});
+let sfConnection;
+async function connectSnowflake() {
+  return new Promise((resolve, reject) => {
+    sfConnection = snowflake.createConnection({
+      account: process.env.SNOWFLAKE_ACCOUNT,
+      username: process.env.SNOWFLAKE_USER,
+      password: process.env.SNOWFLAKE_PASSWORD,
+      warehouse: process.env.SNOWFLAKE_WAREHOUSE,
+      database: process.env.SNOWFLAKE_DATABASE,
+      schema: process.env.SNOWFLAKE_SCHEMA,
+    });
 
-await new Promise((resolve, reject) => {
-  sfConnection.connect((err) => {
-    if (err) return reject(err);
-    console.log('✅ Connected to Snowflake');
-    resolve();
+    sfConnection.connect((err) => {
+      if (err) {
+        console.error('❌ Snowflake connection failed:', err.message);
+        return reject(err);
+      }
+      console.log('✅ Connected to Snowflake');
+      resolve();
+    });
   });
-});
+}
+
+// Initial connection
+await connectSnowflake();
 
 // -------------------- Helper Functions --------------------
 function sqlValue(value) {
@@ -49,13 +58,25 @@ function updatesList(row) {
     .join(',');
 }
 
-function executeSnowflake(sql) {
-  return new Promise((resolve, reject) => {
-    sfConnection.execute({
-      sqlText: sql,
-      complete: (err, stmt, rows) => (err ? reject(err) : resolve(rows)),
+async function executeSnowflake(sql) {
+  try {
+    return await new Promise((resolve, reject) => {
+      sfConnection.execute({
+        sqlText: sql,
+        complete: (err, stmt, rows) => (err ? reject(err) : resolve(rows)),
+      });
     });
-  });
+  } catch (err) {
+    console.error('❌ Snowflake query error, attempting reconnect:', err.message);
+    await connectSnowflake();
+    // Retry once
+    return new Promise((resolve, reject) => {
+      sfConnection.execute({
+        sqlText: sql,
+        complete: (err, stmt, rows) => (err ? reject(err) : resolve(rows)),
+      });
+    });
+  }
 }
 
 // -------------------- Snowflake Table Columns --------------------
@@ -103,8 +124,9 @@ async function mirrorChange(event, table, newRow, oldRow) {
 
   // -------------------- Auto-fill DAY for raw_orders --------------------
   if (table === 'raw_orders' && filteredNew?.DATE && !filteredNew?.DAY) {
-    const daySql = `TO_CHAR(${sqlValue(filteredNew.DATE)}, 'FMDay')`;
-    filteredNew.DAY = `(${daySql})`; // Snowflake expression
+    const d = new Date(filteredNew.DATE);
+    const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    filteredNew.DAY = dayNames[d.getUTCDay()];
   }
 
   let sql = '';
@@ -169,12 +191,17 @@ tables.forEach(table => {
 
 console.log('🌐 Supabase → Snowflake mirror running...');
 
-// -------------------- Express Server for Render --------------------
+// -------------------- Express Server --------------------
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.get('/', (req, res) => {
   res.send('Supabase → Snowflake mirror is running ✅');
+});
+
+// Ping endpoint
+app.get('/ping', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 app.listen(PORT, () => {
