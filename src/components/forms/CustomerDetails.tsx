@@ -36,7 +36,7 @@ interface Props {
 
 export default function CustomerDetails({ data, onChange }: Props) {
   const [paymentModes, setPaymentModes] = useState<string[]>(() =>
-    data.paymentMode ? data.paymentMode.split(", ") : [""]
+    data.paymentMode ? data.paymentMode.split(" + ") : [""]
   );
 
   const [orderModeOptions, setOrderModeOptions] = useState<string[]>([]);
@@ -89,7 +89,7 @@ export default function CustomerDetails({ data, onChange }: Props) {
     newModes[index] = newValue;
     setPaymentModes(newModes);
 
-    const joinedModes = newModes.filter((mode) => mode).join(", ");
+    const joinedModes = newModes.filter((mode) => mode).join(" + ");
     updateField("paymentMode", joinedModes);
   };
 
@@ -101,7 +101,7 @@ export default function CustomerDetails({ data, onChange }: Props) {
     const newModes = paymentModes.filter((_, index) => index !== indexToRemove);
     setPaymentModes(newModes);
 
-    const joinedModes = newModes.filter((mode) => mode).join(", ");
+    const joinedModes = newModes.filter((mode) => mode).join(" + ");
     updateField("paymentMode", joinedModes);
   };
 
