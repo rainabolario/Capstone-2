@@ -64,6 +64,7 @@ const SalesData: React.FC = () => {
   try {
     setLoading(true);
     setProgress(0);
+
     const batchSize = 1000;
     let allRows: any[] = [];
     let from = 0;
@@ -120,18 +121,29 @@ const SalesData: React.FC = () => {
     console.log(`✅ Total rows fetched: ${allRows.length}`);
 
     const formatted = allRows
-      .filter((item) => item.orders?.is_active !== false) // hide archived by default
+      .filter((item) => item.orders?.is_active !== false) // hide archived
       .map((item) => {
-        // Safe date parsing
-        let parsedDate = new Date(item.orders?.order_date || "1970-01-01");
+        // ---------------- Safe date parsing ----------------
+        const rawDate = item.orders?.order_date || "1970-01-01";
+        let parsedDate = new Date(rawDate);
         if (isNaN(parsedDate.getTime())) parsedDate = new Date("1970-01-01");
 
-        // Format date and day
-        const dateStr = parsedDate.toISOString().split("T")[0]; // YYYY-MM-DD
+        // Format YYYY-MM-DD
+        const pad = (n: number) => n.toString().padStart(2, "0");
+        const dateStr = `${parsedDate.getFullYear()}-${pad(parsedDate.getMonth() + 1)}-${pad(parsedDate.getDate())}`;
+
+        // Local day name
         const dayStr = parsedDate.toLocaleDateString("en-US", { weekday: "long" });
 
-        // Safe time parsing
-        const timeStr = item.orders?.order_time || "00:00:00";
+        // ---------------- Safe time parsing ----------------
+        let timeStr = item.orders?.order_time || "00:00:00";
+        // Normalize to HH:MM:SS
+        const timeParts = timeStr.split(":");
+        if (timeParts.length === 3) {
+          timeStr = `${timeParts[0].padStart(2, "0")}:${timeParts[1].padStart(2, "0")}:${timeParts[2].padStart(2, "0")}`;
+        } else {
+          timeStr = "00:00:00";
+        }
 
         return {
           id: item.id,
@@ -152,8 +164,8 @@ const SalesData: React.FC = () => {
 
     // Sort by date + time descending
     formatted.sort((a, b) => {
-      const dtA = new Date(`${a.date}T${a.time}`).getTime();
-      const dtB = new Date(`${b.date}T${b.time}`).getTime();
+      const dtA = new Date(`${a.date}T${a.time}`).getTime() || 0;
+      const dtB = new Date(`${b.date}T${b.time}`).getTime() || 0;
       return dtB - dtA;
     });
 
