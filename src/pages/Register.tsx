@@ -41,49 +41,38 @@ const Register: React.FC<RegisterProps> = ({ onClose }) => {
 
     setLoading(true);
 
-    try {
-      // 1️⃣ Create user in Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-      });
-
-      if (authError) {
-        setError(authError.message);
-        setLoading(false);
-        return;
+  try {
+    // 1. Call your new Edge Function
+    const { data, error: funcError } = await supabase.functions.invoke(
+      'rapid-function', // The name of your deployed function
+      {
+        body: { email, password, name, role },
       }
+    )
 
-      if (authData.user) {
-        const userId = authData.user.id;
-
-        // 2️⃣ Insert profile into your `users` table (DO NOT store password here)
-        const { error: userError } = await supabase.from("users").insert([
-          {
-            id: userId,
-            name,
-            email,
-            role,
-            is_active: true,
-          },
-        ]);
-
-        if (userError) {
-          // If profile insertion fails, we still have the auth user created.
-          // You may want to handle cleanup or notify admin.
-          setError(userError.message);
-        } else {
-          alert("✅ User registered! Please confirm your email before logging in.");
-          onClose();
-        }
-      }
-    } catch (err: any) {
-      console.error("Register error:", err);
-      setError("Something went wrong. Please try again.");
+    if (funcError) {
+      setError(funcError.message);
+      setLoading(false);
+      return;
     }
 
-    setLoading(false);
-  };
+    if (data.error) {
+      setError(data.error);
+      setLoading(false);
+      return;
+    }
+
+    // 2. Success!
+    alert("User registered and is immediately active!");
+    onClose();
+
+  } catch (err: any) {
+    console.error("Register error:", err);
+    setError("Something went wrong. Please try again.");
+  }
+
+  setLoading(false);
+};
 
   return (
     <div className="register-overlay" onClick={onClose}>
