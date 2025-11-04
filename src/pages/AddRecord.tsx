@@ -154,7 +154,7 @@ const { data: orderData, error: orderError } = await supabase
       customer_id: customerId,
       order_date: orderDate,
       order_time: orderTime,
-      order_mode: formData.customer.orderMode,  // <--- add this
+      order_mode: formData.items[0]?.category, // <--- add this
       mop_id: mop?.id || null,
       medium_id: medium?.id || null,
       total_amount: totalAmount,

@@ -13,7 +13,6 @@ import {
   TextField,
   Typography,
   IconButton,
-  Autocomplete
 } from "@mui/material";
 import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
 import type { SelectChangeEvent } from "@mui/material";
@@ -28,7 +27,7 @@ interface OrderItem {
   size: string;
   qty: number;
   price: number;
-  variant_id?: number; // <-- Add this
+  variant_id?: number;
 }
 
 interface Props {
@@ -36,21 +35,9 @@ interface Props {
   onChange: (items: OrderItem[]) => void;
 }
 
-type Category = {
-  id: number;
-  name: string;
-};
-
-type MenuItemData = {
-  id: number;
-  name: string;
-  category_id: number;
-};
-
-type CategorySize = {
-  id: number;
-  size: string;
-};
+type Category = { id: number; name: string };
+type MenuItemData = { id: number; name: string; category_id: number };
+type CategorySize = { id: number; size: string };
 
 const COMPLEX_CATEGORY_NAMES = ["PACKED MEAL"];
 const NO_SIZE_CATEGORIES = ["PACKED MEAL", "STREET FOOD GRAZING CART"];
@@ -69,9 +56,9 @@ export default function OrderItems({ data, onChange }: Props) {
   const [complexItemParts, setComplexItemParts] = useState<string[]>(["", ""]);
   const [customItemPrice, setCustomItemPrice] = useState(0);
   const [hasSizes, setHasSizes] = useState(true);
+  const [activePrice, setActivePrice] = useState<number | null>(null);
 
-  const [activeVariantPrice, setActiveVariantPrice] = useState<number | null>(null);
-
+  // --- FETCH CATEGORIES ---
   useEffect(() => {
     const fetchCategories = async () => {
       const { data, error } = await supabase.from("category").select("id, name");
@@ -81,17 +68,13 @@ export default function OrderItems({ data, onChange }: Props) {
     fetchCategories();
   }, []);
 
+  // --- FETCH MENU ITEMS AND SIZES ---
   useEffect(() => {
     if (!selectedCategoryId) {
       setMenuItems([]);
       setCategorySizes([]);
       return;
     }
-
-    const selectedCategory = categories.find(
-      (c) => c.id === Number(selectedCategoryId)
-    );
-    const categoryName = selectedCategory?.name || "";
 
     if (!isComplexCategory) {
       const fetchMenuItems = async () => {
@@ -107,92 +90,78 @@ export default function OrderItems({ data, onChange }: Props) {
       setMenuItems([]);
     }
 
-    // ✅ Handle size logic
     if (hasSizes) {
-      if (categoryName === "FROZEN DELIGHT") {
-        // Directly set size options to Big and Small
-        setCategorySizes([
-          { id: 1, size: "BIG" },
-          { id: 2, size: "SMALL" },
-        ]);
-      } else {
-        // Otherwise, fetch from Supabase normally
-        const fetchCategorySizes = async () => {
+      const fetchCategorySizes = async () => {
+        try {
           const { data: items, error: itemsError } = await supabase
             .from("menu_items")
             .select("id")
             .eq("category_id", selectedCategoryId);
+          if (itemsError) throw itemsError;
 
-          if (itemsError) {
-            console.error("Error getting item IDs for sizes:", itemsError);
-            return;
-          }
-          const itemIds = items.map((i) => i.id);
-
+          const itemIds = items.map(i => i.id);
           const { data: variants, error: variantsError } = await supabase
             .from("menu_item_variants")
             .select("size_id")
             .in("menu_item_id", itemIds);
+          if (variantsError) throw variantsError;
 
-          if (variantsError) {
-            console.error("Error getting variants for sizes:", variantsError);
-            return;
-          }
-
-          const uniqueSizeIds = [
-            ...new Set(
-              variants.map((v) => v.size_id).filter((id) => id !== null)
-            ),
-          ];
-
+          const uniqueSizeIds = [...new Set(variants.map(v => v.size_id).filter(Boolean))];
           const { data: sizes, error: sizesError } = await supabase
             .from("category_sizes")
             .select("id, size")
             .in("id", uniqueSizeIds);
+          if (sizesError) throw sizesError;
 
-          if (sizesError) {
-            console.error("Error fetching size details:", sizesError);
-          } else {
-            const validSizes = (sizes || []).filter(
-              (size) => size.size !== null && size.size !== "NULL"
-            );
-            setCategorySizes(validSizes);
-          }
-        };
-        fetchCategorySizes();
-      }
+          setCategorySizes(sizes || []);
+        } catch (err) {
+          console.error("Error fetching sizes:", err);
+          setCategorySizes([]);
+        }
+      };
+      fetchCategorySizes();
     } else {
       setCategorySizes([]);
     }
-  }, [selectedCategoryId, isComplexCategory, hasSizes, categories]);
+  }, [selectedCategoryId, isComplexCategory, hasSizes]);
 
+  // --- FETCH PRICE FROM RAW_MENU OR USE TYPED PRICE ---
   useEffect(() => {
-  if (!selectedMenuItemId || !selectedSizeId) {
-    setActiveVariantPrice(null);
-    return;
-  }
-
-  const fetchVariant = async () => {
-    const { data: variantData, error } = await supabase
-      .from("menu_item_variants")
-      .select("id, price, is_active")
-      .eq("menu_item_id", Number(selectedMenuItemId))
-      .eq("size_id", Number(selectedSizeId))
-      .single();
-
-    if (error) {
-      console.error("Error fetching variant:", error);
-      setActiveVariantPrice(null);
-    } else if (variantData) {
-      setActiveVariantPrice(variantData.is_active ? variantData.price : null);
-      if (!variantData.is_active) {
-        setCustomItemPrice(0); // allow typing
-      }
+    if (!selectedMenuItemId || (hasSizes && !selectedSizeId)) {
+      setActivePrice(null);
+      return;
     }
-  };
 
-  fetchVariant();
-}, [selectedMenuItemId, selectedSizeId]);
+    if (isComplexCategory) {
+      setActivePrice(null);
+      return;
+    }
+
+    const fetchRawMenuPrice = async () => {
+      const menuName = menuItems.find(i => i.id === Number(selectedMenuItemId))?.name;
+      if (!menuName) return;
+
+      const { data: menuData, error } = await supabase
+        .from("raw_menu")
+        .select("price")
+        .eq("category", Number(selectedCategoryId))
+        .eq("name", menuName)
+        .eq("size", hasSizes ? Number(selectedSizeId) : null)
+        .limit(1)
+        .single();
+
+      if (error) {
+        console.error("Error fetching raw menu price:", error);
+        setActivePrice(null);
+      } else if (menuData && menuData.price > 0) {
+        setActivePrice(menuData.price);
+      } else {
+        setActivePrice(null);
+      }
+    };
+
+    fetchRawMenuPrice();
+  }, [selectedCategoryId, selectedMenuItemId, selectedSizeId, isComplexCategory, menuItems, hasSizes]);
 
   const handleComplexItemChange = (index: number, value: string) => {
     const newParts = [...complexItemParts];
@@ -200,117 +169,74 @@ export default function OrderItems({ data, onChange }: Props) {
     setComplexItemParts(newParts);
   };
 
-  const addComplexItemField = () => {
-    setComplexItemParts([...complexItemParts, ""]);
-  };
-
+  const addComplexItemField = () => setComplexItemParts([...complexItemParts, ""]);
   const removeComplexItemField = (indexToRemove: number) => {
-    // Only allow removing fields if there are more than 2
     if (complexItemParts.length <= 2) return;
-    const newParts = complexItemParts.filter(
-      (_, index) => index !== indexToRemove
-    );
-    setComplexItemParts(newParts);
+    setComplexItemParts(complexItemParts.filter((_, idx) => idx !== indexToRemove));
   };
+  const joinedComplexName = complexItemParts.map(p => p.trim()).filter(p => p).join(" + ");
 
-  const joinedComplexName = complexItemParts
-    .map((p) => p.trim()) // Get rid of whitespace
-    .filter((p) => p) // Filter out empty strings
-    .join(" + "); 
-
+  // --- HANDLE ADD ITEM ---
   const handleAdd = async () => {
-    const category = categories.find((c) => c.id === Number(selectedCategoryId));
-    if (!category) {
-      alert("Please select a category.");
-      return;
-    }
-    if (selectedQty < 1) {
-      alert("Quantity must be at least 1.");
-      return;
-    }
+    const category = categories.find(c => c.id === Number(selectedCategoryId));
+    if (!category) return alert("Please select a category.");
+    if (selectedQty < 1) return alert("Quantity must be at least 1.");
 
-    const priceToUse = activeVariantPrice ?? customItemPrice;
+    const priceToUse = activePrice ?? customItemPrice;
+    if (priceToUse <= 0) return alert("Please enter a price greater than 0.");
 
-    if (priceToUse <= 0) {
-      alert("Please enter a price greater than 0.");
-      return;
-    }
+    // Determine item name
+    let itemName = "";
+    let matchedMenuItem: MenuItemData | null = null;
 
-    // if (customItemPrice <= 0) {
-    //   alert("Please enter a price greater than 0.");
-    //   return;
-    // }
-
-    // Fetch the correct variant_id from menu_item_variants
-    let variant_id: number | null = null;
-
-    if (!isComplexCategory && hasSizes) {
-  const { data: variantData, error: variantError } = await supabase
-    .from("menu_item_variants")
-    .select("id, price, is_active")
-    .eq("menu_item_id", Number(selectedMenuItemId))
-    .eq("size_id", Number(selectedSizeId))
-    .single();
-
-  if (variantError) {
-    console.error("Error fetching variant:", variantError);
-    setActiveVariantPrice(null);
-  } else if (variantData) {
-    variant_id = variantData.id;
-    if (variantData.is_active) {
-      setActiveVariantPrice(variantData.price); // ✅ set the active price
-    } else {
-      setActiveVariantPrice(null); // variant not active, allow typing
-    }
-  }
-} else {
-  setActiveVariantPrice(null); // complex item or no size
-}
-
-
-    let newItem: OrderItem;
     if (isComplexCategory) {
-  if (!joinedComplexName) {
-    alert("Please enter an item name.");
-    return;
-  }
+      const parts = complexItemParts.map(p => p.trim()).filter(p => p);
+      if (!parts.length) return alert("Please enter item parts.");
+      itemName = parts.join(" + ");
+    } else {
+      const menuItem = menuItems.find(i => i.id === Number(selectedMenuItemId));
+      if (!menuItem) return alert("Please select an item.");
+      itemName = menuItem.name;
 
-  newItem = {
-    category: category.name,
-    name: joinedComplexName,
-    size: "N/A",
-    qty: selectedQty,
-    price: priceToUse,
-    variant_id: variant_id || undefined, // OK for complex items
-  };
-} else {
-  const menuItem = menuItems.find((i) => i.id === Number(selectedMenuItemId));
-  if (!menuItem) {
-    alert("Please fill in all required fields: Item Name.");
-    return;
-  }
+      // Fetch menu_item_variant using size
+      const { data, error } = await supabase
+        .from("menu_item_variants")
+        .select("id")
+        .eq("menu_item_id", menuItem.id)
+        .eq("size_id", Number(selectedSizeId))
+        .limit(1)
+        .single();
 
-  let sizeName = "N/A";
-  if (hasSizes) {
-    const size = categorySizes.find((s) => s.id === Number(selectedSizeId));
-    if (!size) {
-      alert("Please fill in all required fields: Size.");
-      return;
+      if (error && error.code !== "PGRST116") console.error(error);
+      matchedMenuItem = menuItem;
     }
-    sizeName = size.size;
-  }
 
-  newItem = {
-    category: category.name,
-    name: menuItem.name,
-    size: sizeName,
-    qty: selectedQty,
-    price: priceToUse,
-    variant_id: variant_id || undefined, // ✅ Assign variant_id here too
-  };
-}
+    // Get variant_id
+    let variantId: number | undefined = undefined;
+    if (!isComplexCategory && matchedMenuItem) {
+      const { data: variantData, error: variantError } = await supabase
+        .from("menu_item_variants")
+        .select("id")
+        .eq("menu_item_id", matchedMenuItem.id)
+        .eq("size_id", Number(selectedSizeId))
+        .limit(1)
+        .single();
+
+      if (!variantError && variantData) variantId = variantData.id;
+    }
+
+    const newItem: OrderItem = {
+      category: category.name,
+      name: itemName,
+      size: hasSizes ? categorySizes.find(s => s.id === Number(selectedSizeId))?.size || "N/A" : "N/A",
+      qty: selectedQty,
+      price: priceToUse,
+      variant_id: variantId,
+    };
 
     onChange([...data, newItem]);
+
+    // Reset fields
     setSelectedCategoryId("");
     setSelectedMenuItemId("");
     setSelectedSizeId("");
@@ -321,112 +247,63 @@ export default function OrderItems({ data, onChange }: Props) {
     setHasSizes(true);
     setMenuItems([]);
     setCategorySizes([]);
+    setActivePrice(null);
   };
 
   const handleCategoryChange = (e: SelectChangeEvent) => {
     const categoryId = e.target.value;
-    const category = categories.find((c) => c.id === Number(categoryId));
-
+    const category = categories.find(c => c.id === Number(categoryId));
     setSelectedCategoryId(categoryId);
     setSelectedMenuItemId("");
     setSelectedSizeId("");
     setComplexItemParts(["", ""]);
     setCustomItemPrice(0);
     setSelectedQty(1);
-
-    if (category && COMPLEX_CATEGORY_NAMES.includes(category.name)) {
-      setIsComplexCategory(true);
-    } else {
-      setIsComplexCategory(false);
-    }
-
-    if (category && NO_SIZE_CATEGORIES.includes(category.name)) {
-      setHasSizes(false);
-    } else {
-      setHasSizes(true);
-    }
+    setIsComplexCategory(category ? COMPLEX_CATEGORY_NAMES.includes(category.name) : false);
+    setHasSizes(category ? !NO_SIZE_CATEGORIES.includes(category.name) : true);
   };
 
-  const handleItemChange = (newValue: MenuItemData | null) => {
-    setSelectedMenuItemId(newValue ? String(newValue.id) : "");
-  };
-
-  const handleRemove = (indexToRemove: number) => {
-    const newData = data.filter((_, idx) => idx !== indexToRemove);
-    onChange(newData);
-  };
+  const handleItemChange = (e: SelectChangeEvent) => setSelectedMenuItemId(e.target.value);
+  const handleRemove = (idx: number) => onChange(data.filter((_, i) => i !== idx));
 
   const isNormalFlowInvalid =
-  !selectedMenuItemId || // Item must be selected
-  (hasSizes && !selectedSizeId) || // Size must be selected if applicable
-  (activeVariantPrice === null && customItemPrice <= 0); // Price required if no active variant
-
+    !selectedMenuItemId || (hasSizes && !selectedSizeId) || (activePrice === null && customItemPrice <= 0);
   const isComplexFlowInvalid =
-  !joinedComplexName || // Name must be entered
-  (activeVariantPrice === null && customItemPrice <= 0); // Price required if no active variant
-
-  const selectedItemObject =
-    menuItems.find((item) => item.id === Number(selectedMenuItemId)) || null;
+    !joinedComplexName || (activePrice === null && customItemPrice <= 0);
 
   return (
     <div className="order-items-container">
       <h3>Add Order Items</h3>
       <Divider sx={{ mb: 3 }} />
-
       <div className="order-item-fields">
         <div className="order-items-content">
           {/* Category */}
           <FormControl fullWidth sx={{ mb: 2 }}>
-            <InputLabel id="cat-label" shrink>
-              Item Category
-            </InputLabel>
+            <InputLabel id="cat-label" shrink>Item Category</InputLabel>
             <Select
               labelId="cat-label"
               value={selectedCategoryId}
               onChange={handleCategoryChange}
               displayEmpty
-              renderValue={(selected) => {
-                if (!selected)
-                  return <span style={{ color: "#9e9e9e" }}>Select category</span>;
-                const categoryName = categories.find(
-                  (c) => c.id === Number(selected)
-                )?.name;
-                return categoryName || "";
-              }}
+              renderValue={(selected) => !selected ? <span style={{ color: "#9e9e9e" }}>Select category</span> : categories.find(c => c.id === Number(selected))?.name || ""}
             >
-              {categories.map((category) => (
-                <MenuItem key={category.id} value={category.id}>
-                  {category.name}
-                </MenuItem>
-              ))}
+              {categories.map(c => <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>)}
             </Select>
           </FormControl>
 
           {isComplexCategory ? (
             <Box sx={{ display: "flex", flexDirection: "column", gap: 1, mb: 2 }}>
               {complexItemParts.map((part, index) => (
-                <Box
-                  key={index}
-                  sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                >
+                <Box key={index} sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                   <TextField
                     label={`Item ${index + 1}`}
                     value={part}
-                    onChange={(e) =>
-                      handleComplexItemChange(index, e.target.value)
-                    }
+                    onChange={e => handleComplexItemChange(index, e.target.value)}
                     fullWidth
                     InputLabelProps={{ shrink: true }}
-                    sx={{
-                      mb: 1
-                    }}
                   />
                   {index > 1 && (
-                    <IconButton
-                      onClick={() => removeComplexItemField(index)}
-                      size="small"
-                      aria-label="remove item part"
-                    >
+                    <IconButton onClick={() => removeComplexItemField(index)} size="small">
                       <DeleteIcon />
                     </IconButton>
                   )}
@@ -436,74 +313,42 @@ export default function OrderItems({ data, onChange }: Props) {
                 onClick={addComplexItemField}
                 startIcon={<AddIcon />}
                 variant="outlined"
-                sx={{
-                  alignSelf: "flex-start",
-                  color: "#ec7a1c",
-                  borderColor: "#ec7a1c",
-                  padding: '6px 16px', 
-                    "&:hover": { 
-                      backgroundColor: "#ec7a1c",
-                      color: "white",
-                      borderColor: "#ec7a1c",
-                    },
-                 }}
+                sx={{ alignSelf: "flex-start", color: "#ec7a1c", borderColor: "#ec7a1c", padding: '6px 16px', "&:hover": { backgroundColor: "#ec7a1c", color: "white", borderColor: "#ec7a1c" } }}
               >
                 Meal Item
               </Button>
             </Box>
           ) : (
-            <Autocomplete
-              fullWidth
-              sx={{ mb: 2 }}
-              options={menuItems}
-              getOptionLabel={(option) => option.name}
-              value={selectedItemObject} // Use the calculated object
-              onChange={(_, newValue) => {
-                handleItemChange(newValue); // Call the updated handler
-              }}
-              disabled={!selectedCategoryId}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Item Name"
-                  placeholder="Search for an item..."
-                  InputLabelProps={{ shrink: true }}
-                />
-              )}
-            />
+            <FormControl fullWidth sx={{ mb: 2 }}>
+              <InputLabel id="name-label" shrink>Item Name</InputLabel>
+              <Select
+                labelId="name-label"
+                value={selectedMenuItemId}
+                onChange={handleItemChange}
+                disabled={!selectedCategoryId}
+                displayEmpty
+                renderValue={(selected) => !selected ? <span style={{ color: "#9e9e9e" }}>Select item</span> : menuItems.find(i => i.id === Number(selected))?.name || ""}
+              >
+                {menuItems.map(i => <MenuItem key={i.id} value={i.id}>{i.name}</MenuItem>)}
+              </Select>
+            </FormControl>
           )}
 
+          {/* Sizes and Quantity */}
           <div className="size-quantity-container">
             {hasSizes && (
-              <FormControl
-                component="fieldset"
-                className="size-group"
-                disabled={!selectedCategoryId}
-              >
+              <FormControl component="fieldset" className="size-group" disabled={!selectedCategoryId}>
                 <p>Size</p>
-                <RadioGroup
-                  row
-                  value={selectedSizeId}
-                  onChange={(e) => setSelectedSizeId(e.target.value)}
-                  style={{ color: "black", marginLeft: "24px" }}
-                >
-                  {categorySizes.map((size) => (
-                    <FormControlLabel
-                      key={size.id}
-                      value={size.id}
-                      control={<Radio />}
-                      label={size.size}
-                    />
-                  ))}
+                <RadioGroup row value={selectedSizeId} onChange={e => setSelectedSizeId(e.target.value)} style={{ color: "black", marginLeft: "24px" }}>
+                  {categorySizes.map(s => <FormControlLabel key={s.id} value={s.id.toString()} control={<Radio />} label={s.size} />)}
                 </RadioGroup>
               </FormControl>
             )}
-
             <TextField
               type="number"
               label="Quantity"
               value={selectedQty}
-              onChange={(e) => setSelectedQty(Number(e.target.value))}
+              onChange={e => setSelectedQty(Number(e.target.value))}
               sx={{ mb: 2, width: "30%" }}
               inputProps={{ min: 1 }}
               InputLabelProps={{ shrink: true }}
@@ -511,83 +356,48 @@ export default function OrderItems({ data, onChange }: Props) {
             />
           </div>
 
+          {/* Price and Add Button */}
           <div className="price-button-container">
             <TextField
               type="number"
               label="Price per Item (₱)"
-              value={activeVariantPrice ?? customItemPrice}
-              onChange={(e) => setCustomItemPrice(Number(e.target.value))}
+              value={activePrice ?? customItemPrice}
+              onChange={e => setCustomItemPrice(Number(e.target.value))}
               sx={{ mb: 2, width: "100%" }}
               InputLabelProps={{ shrink: true }}
               inputProps={{ min: 0 }}
-              disabled={activeVariantPrice !== null} // read-only if active variant
+              disabled={activePrice !== null}
             />
-
-            {(() => {
-              const isButtonDisabled =
-                !selectedCategoryId ||
-                (isComplexCategory ? isComplexFlowInvalid : isNormalFlowInvalid);
-
-              return (
-                <Button
-  variant={isButtonDisabled ? "outlined" : "contained"}
-  startIcon={<AddShoppingCartIcon />}
-  onClick={handleAdd}
-  sx={
-    isButtonDisabled
-      ? {
-          borderColor: 'rgba(0, 0, 0, 0.26)',
-          color: 'rgba(0, 0, 0, 0.26)'
-        }
-      : {
-          backgroundColor: "#EC7A1C",
-          "&:hover": {
-            backgroundColor: "#d66c10",
-          },
-        }
-  }
-  disabled={isButtonDisabled}
->
-  {data.length === 0 ? "Add To Cart" : "Add Another Item"}
-</Button>
-              );
-            })()}
+            <Button
+              variant={(isComplexCategory ? isComplexFlowInvalid : isNormalFlowInvalid) ? "outlined" : "contained"}
+              startIcon={<AddShoppingCartIcon />}
+              onClick={handleAdd}
+              sx={(isComplexCategory ? isComplexFlowInvalid : isNormalFlowInvalid) ? { borderColor: 'rgba(0,0,0,0.26)', color: 'rgba(0,0,0,0.26)' } : { backgroundColor: "#EC7A1C", "&:hover": { backgroundColor: "#d66c10" } }}
+              disabled={isComplexCategory ? isComplexFlowInvalid : isNormalFlowInvalid}
+            >
+              {data.length === 0 ? "Add To Cart" : "Add Another Item"}
+            </Button>
           </div>
         </div>
 
         <Divider orientation="vertical" flexItem />
 
+        {/* Order List */}
         <div className="order-items-list">
           <h4>Order List</h4>
           {data.length === 0 && (
-            <Typography variant="body2" color="text.secondary" sx={{ ml: 2 }}>
-              No items added yet.
-            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ ml: 2 }}>No items added yet.</Typography>
           )}
           {data.map((item, idx) => (
             <Box key={idx} sx={{ mb: 2, ml: 2, position: "relative" }}>
-              <IconButton
-                aria-label="delete"
-                size="small"
-                onClick={() => handleRemove(idx)}
-                sx={{
-                  position: "absolute",
-                  top: -5,
-                  right: -5,
-                  color: "rgba(0, 0, 0, 0.54)",
-                }}
-              >
+              <IconButton aria-label="delete" size="small" onClick={() => handleRemove(idx)} sx={{ position: "absolute", top: -5, right: -5, color: "rgba(0,0,0,0.54)" }}>
                 <DeleteIcon fontSize="small" />
               </IconButton>
-              <h5>
-                {item.qty} × {item.name}
-              </h5>
+              <h5>{item.qty} × {item.name}</h5>
               <p>{item.category}</p>
               <p>{item.size}</p>
               <p>₱ {item.price} each</p>
-              <p>
-                <strong>Subtotal: ₱ {item.price * item.qty}</strong>
-              </p>
+              <p><strong>Subtotal: ₱ {item.price * item.qty}</strong></p>
             </Box>
           ))}
         </div>
