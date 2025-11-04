@@ -7,6 +7,7 @@ import ReviewSubmit from "../components/forms/ReviewSubmit"
 import { useState } from "react"
 import type { Dayjs } from "dayjs"
 import { supabase } from "../supabaseClient"
+import dayjs from "dayjs"
 interface Customer {
   name: string
   date: Dayjs | null
@@ -41,8 +42,8 @@ export default function AddRecord({ onLogout }: AddRecordProps) {
   const [formData, setFormData] = useState<FormData>({
     customer: {
       name: "",
-      date: null,
-      time: null,
+      date: dayjs(),
+      time: dayjs(),
       paymentMode: "",
       orderMode: "",
     },

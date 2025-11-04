@@ -13,6 +13,7 @@ import {
   TextField,
   Typography,
   IconButton,
+  Autocomplete
 } from "@mui/material";
 import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
 import type { SelectChangeEvent } from "@mui/material";
@@ -346,8 +347,8 @@ export default function OrderItems({ data, onChange }: Props) {
     }
   };
 
-  const handleItemChange = (e: SelectChangeEvent) => {
-    setSelectedMenuItemId(e.target.value);
+  const handleItemChange = (newValue: MenuItemData | null) => {
+    setSelectedMenuItemId(newValue ? String(newValue.id) : "");
   };
 
   const handleRemove = (indexToRemove: number) => {
@@ -363,6 +364,9 @@ export default function OrderItems({ data, onChange }: Props) {
   const isComplexFlowInvalid =
   !joinedComplexName || // Name must be entered
   (activeVariantPrice === null && customItemPrice <= 0); // Price required if no active variant
+
+  const selectedItemObject =
+    menuItems.find((item) => item.id === Number(selectedMenuItemId)) || null;
 
   return (
     <div className="order-items-container">
@@ -448,32 +452,25 @@ export default function OrderItems({ data, onChange }: Props) {
               </Button>
             </Box>
           ) : (
-            <FormControl fullWidth sx={{ mb: 2 }}>
-              <InputLabel id="name-label" shrink>
-                Item Name
-              </InputLabel>
-              <Select
-                labelId="name-label"
-                value={selectedMenuItemId}
-                onChange={handleItemChange}
-                disabled={!selectedCategoryId}
-                displayEmpty
-                renderValue={(selected) => {
-                  if (!selected)
-                    return <span style={{ color: "#9e9e9e" }}>Select item</span>;
-                  const itemName = menuItems.find(
-                    (i) => i.id === Number(selected)
-                  )?.name;
-                  return itemName || "";
-                }}
-              >
-                {menuItems.map((item) => (
-                  <MenuItem key={item.id} value={item.id}>
-                    {item.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <Autocomplete
+              fullWidth
+              sx={{ mb: 2 }}
+              options={menuItems}
+              getOptionLabel={(option) => option.name}
+              value={selectedItemObject} // Use the calculated object
+              onChange={(_, newValue) => {
+                handleItemChange(newValue); // Call the updated handler
+              }}
+              disabled={!selectedCategoryId}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Item Name"
+                  placeholder="Search for an item..."
+                  InputLabelProps={{ shrink: true }}
+                />
+              )}
+            />
           )}
 
           <div className="size-quantity-container">
