@@ -36,13 +36,15 @@
 }
 
 .users-table-container {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;
+    background-color: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
     overflow-x: auto;
-    border-radius: 8px;
-    max-height: 70vh;
+    overflow-y: auto;  
+    height: 70vh;   
+    margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    scrollbar-color: #ec7a1c #f9f9fa; 
 }
 
 .users-table-container::-webkit-scrollbar {

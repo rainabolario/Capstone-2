@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import "../css/ArchivedData.css";
 import { supabase } from "../supabaseClient";
-import { Checkbox, Typography, Divider, Button } from "@mui/material";
+import { Checkbox, Typography, Divider, Button, TextField, LinearProgress, Box } from "@mui/material";
 import RestoreIcon from "@mui/icons-material/Restore";
 import SearchIcon from "@mui/icons-material/Search";
 
@@ -29,6 +29,7 @@ const ArchivedData: React.FC<Props> = ({ fetchSalesData }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [salesData, setSalesData] = useState<SalesRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [progress, setProgress] = useState(0);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const userRole = localStorage.getItem("userRole");
 
@@ -53,47 +54,82 @@ const ArchivedData: React.FC<Props> = ({ fetchSalesData }) => {
     };
   }, []);
 
-  // ✅ Fetch archived records
   const fetchArchived = async () => {
     setLoading(true);
+    setProgress(0); // Reset progress
 
-    const { data, error } = await supabase
-      .from("orders")
-      .select(`
-        id,
-        order_date,
-        order_time,
-        order_mode,
-        total_amount,
-        customers(name),
-        medium:medium_id(name),
-        mop:mop_id(name),
-        order_items(
-          id,
-          quantity,
-          subtotal,
-          variant_id(
+    const batchSize = 1000;
+    let allRows: any[] = [];
+    let from = 0;
+    let to = batchSize - 1;
+    let totalCount = 0;
+
+    try {
+      while (true) {
+        const { data, error, count } = await supabase
+          .from("orders")
+          .select(
+            `
             id,
-            menu_items(name),
-            category_sizes(size)
+            order_date,
+            order_time,
+            order_mode,
+            total_amount,
+            customers(name),
+            medium:medium_id(name),
+            mop:mop_id(name),
+            order_items(
+              id,
+              quantity,
+              subtotal,
+              variant_id(
+                id,
+                menu_items(name),
+                category_sizes(size)
+              )
+            )
+          `,
+            { count: "exact" } 
           )
-        )
-      `)
-      .eq("is_active", false)
-      .order("order_date", { ascending: false });
+          .eq("is_active", false)
+          .order("order_date", { ascending: false })
+          .range(from, to); 
 
-    if (error) {
-      console.error("Error fetching archived data:", error);
-      setSalesData([]);
-    } else {
-      const formatted: SalesRecord[] = (data || []).flatMap((order: any) =>
+        if (error) {
+          console.error("Error fetching archived data:", error);
+          throw error; 
+        }
+
+        if (data) {
+          allRows = allRows.concat(data);
+        }
+
+        if (from === 0 && count) {
+          totalCount = count;
+        }
+
+        if (totalCount > 0) {
+          setProgress(Math.min((allRows.length / totalCount) * 100, 100));
+        }
+
+        if (!data || data.length < batchSize) {
+          break; 
+        }
+
+        from += batchSize;
+        to += batchSize;
+      }
+
+      const formatted: SalesRecord[] = (allRows || []).flatMap((order: any) =>
         (order.order_items || []).map((item: any) => ({
           id: `${order.id}-${item.id}`,
           name: order.customers?.name || "N/A",
           time: order.order_time || "",
           date: order.order_date || "",
           day: order.order_date
-            ? new Date(order.order_date).toLocaleDateString("en-US", { weekday: "long" })
+            ? new Date(order.order_date).toLocaleDateString("en-US", {
+                weekday: "long",
+              })
             : "",
           item: item.variant_id?.menu_items?.name || "N/A",
           itemSize: item.variant_id?.category_sizes?.size || "N/A",
@@ -105,6 +141,10 @@ const ArchivedData: React.FC<Props> = ({ fetchSalesData }) => {
         }))
       );
       setSalesData(formatted);
+      
+    } catch (err) {
+      console.error("Failed to fetch archived data:", err);
+      setSalesData([]);
     }
 
     setLoading(false);
@@ -184,18 +224,27 @@ const ArchivedData: React.FC<Props> = ({ fetchSalesData }) => {
         <Divider />
 
         <div className="archived-action-bar">
-          <div className="archived-search-container">
-            <input
-              type="text"
-              placeholder="Search"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="search-input"
-            />
-            <button className="sales-search-button">
-              <SearchIcon className="search-icon" />
-            </button>
-          </div>
+          <TextField
+            size="small"
+            placeholder="Search..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            InputProps={{
+              startAdornment: <SearchIcon sx={{ color: "gray", mr: 1 }} />,
+            }}
+            sx={{ 
+              flex: 1, 
+              maxWidth: 250, 
+              mr: 1, 
+              "& .MuiOutlinedInput-root": {
+                backgroundColor: "white",
+                borderRadius: "8px",
+                "&.Mui-focused fieldset": {
+                  borderColor: "#EC7A1C",
+                },
+              }
+            }}
+          />
 
           <Button
             variant="outlined"
@@ -218,7 +267,33 @@ const ArchivedData: React.FC<Props> = ({ fetchSalesData }) => {
 
         <div className="archived-table-container">
           {loading ? (
-            <p>Loading archived records...</p>
+            <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "40px", // Give it some space
+              minHeight: "300px",
+            }}
+          >
+            <Typography variant="body2" sx={{ color: "#EC7A1C" }}>
+              Loading archived records... ({progress.toFixed(0)}%)
+            </Typography>
+            <LinearProgress
+              variant="determinate"
+              value={progress}
+              sx={{
+                height: 8,
+                borderRadius: 5,
+                backgroundColor: "#f5f5f5",
+                "& .MuiLinearProgress-bar": { backgroundColor: "#EC7A1C" },
+                width: "70%",
+                maxWidth: "400px",
+                mt: 1.5,
+              }}
+            />
+          </Box>
           ) : (
             <table className="archived-table">
               <thead>
@@ -266,7 +341,7 @@ const ArchivedData: React.FC<Props> = ({ fetchSalesData }) => {
                         <Checkbox
                           sx={{
                             color: "gray",
-                            "&.Mui-checked": { color: "#ff8c42" },
+                            "&.Mui-checked": { color: "#EC7A1C" },
                           }}
                           checked={selectedIds.includes(record.id)}
                           onChange={() => toggleSelect(record.id)}

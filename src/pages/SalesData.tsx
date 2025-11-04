@@ -8,6 +8,7 @@ import {
   EditOutlined,
   Search as SearchIcon,
   FilterList as FilterListIcon,
+  FileDownloadOutlined,
 } from "@mui/icons-material";
 import { supabase } from "../supabaseClient";
 import {
@@ -21,6 +22,10 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Tooltip,
+  IconButton,
+  Popover,
+  Box,
 } from "@mui/material";
 
 interface SalesRecord {
@@ -52,7 +57,7 @@ const SalesData: React.FC = () => {
   const [filterOrderType, setFilterOrderType] = useState<string>("All");
   const [appliedFilterYear, setAppliedFilterYear] = useState<string>("All");
   const [appliedFilterOrderType, setAppliedFilterOrderType] = useState<string>("All");
-  const [showFilters, setShowFilters] = useState(false);
+  const [filterAnchorEl, setFilterAnchorEl] = useState<HTMLButtonElement | null>(null);
 
   const pageSize = 100;
   const userRole = localStorage.getItem("userRole");
@@ -351,6 +356,16 @@ const SalesData: React.FC = () => {
     document.body.removeChild(link);
   };
 
+  const handleFilterClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+  setFilterAnchorEl(event.currentTarget);
+  };
+
+  const handleFilterClose = () => {
+    setFilterAnchorEl(null);
+  };
+
+  const isFilterOpen = Boolean(filterAnchorEl);
+
   // ============================================================
   // 🔹 Render
   // ============================================================
@@ -358,24 +373,6 @@ const SalesData: React.FC = () => {
     <div style={{ display: "flex", minHeight: "100vh" }}>
       <Sidebar />
       <div className="sales-data-container">
-        {loading && (
-          <div className="progress-section">
-            <Typography variant="body2" sx={{ color: "#EC7A1C" }}>
-              Loading all {salesData.length || "…"} records ({progress.toFixed(0)}%)
-            </Typography>
-            <LinearProgress
-              variant="determinate"
-              value={progress}
-              sx={{
-                height: 8,
-                borderRadius: 5,
-                backgroundColor: "#f5f5f5",
-                "& .MuiLinearProgress-bar": { backgroundColor: "#EC7A1C" },
-              }}
-            />
-          </div>
-        )}
-
         <div className="header-section">
           <div className="header-left">
             <h1 className="page-title">SALES DATA</h1>
@@ -394,43 +391,94 @@ const SalesData: React.FC = () => {
 
         {/* Action bar */}
         <div className="action-bar">
+          <div className="search-filter-wrapper">
           <TextField
             size="small"
             placeholder="Search..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             InputProps={{
-              startAdornment: <SearchIcon sx={{ color: "#EC7A1C", mr: 1 }} />,
+              startAdornment: <SearchIcon sx={{ color: "gray", mr: 1 }} />,
             }}
-            sx={{ flex: 1, maxWidth: 250, mr: 1 }}
+            sx={{ 
+              flex: 1, 
+              maxWidth: 250, 
+              mr: 1, 
+              "& .MuiOutlinedInput-root": {
+                backgroundColor: "white",
+                borderRadius: "8px",
+                "&.Mui-focused fieldset": {
+                  borderColor: "#EC7A1C",
+                },
+              }
+            }}
           />
 
-          <Button
-            variant="outlined"
-            startIcon={<FilterListIcon />}
-            onClick={() => setShowFilters(!showFilters)}
-            sx={{
-              mr: 2,
-              border: "none",
-              "&:hover": { backgroundColor: "#EC7A1C", color: "white" },
+          <Tooltip 
+            title="Show/Hide Filters" 
+            arrow
+            placement="top"
+            slotProps={{
+              tooltip: {
+                sx: {
+                  backgroundColor: "#EC7A1C",
+                  fontSize: "13px",
+                  color: "white"
+                },
+              },
+              popper: {
+                sx:{
+                  "& .MuiTooltip-arrow": {
+                    color: "#EC7A1C",
+                  },
+                },
+              },
             }}
           >
-            Filters
-          </Button>
+            <IconButton
+              onClick={handleFilterClick}
+              sx={{
+                mr: 0.5,
+                color: "black",
+                "&:hover": { backgroundColor: "#EC7A1C", color: "white" },
+              }}
+            >
+              <FilterListIcon />
+            </IconButton>
+          </Tooltip>
 
-          <Button
-            variant="outlined"
-            sx={{
-              color: "black",
-              border: "none",
-              "&:hover": { backgroundColor: "#EC7A1C", color: "white" },
-              padding: "8px 25px",
-              mr: 2,
+          <Tooltip 
+            title="Generate CSV Report" 
+            arrow
+            placement="top"
+            slotProps={{
+              tooltip: {
+                sx: {
+                  backgroundColor: "#EC7A1C",
+                  fontSize: "13px",
+                  color: "white"
+                },
+              },
+              popper: {
+                sx:{
+                  "& .MuiTooltip-arrow": {
+                    color: "#EC7A1C",
+                  },
+                },
+              },
             }}
-            onClick={generateCSV}
           >
-            Generate Report
-          </Button>
+            <IconButton
+              onClick={generateCSV}
+              sx={{
+                color: "black",
+                "&:hover": { backgroundColor: "#EC7A1C", color: "white" },
+              }}
+            >
+              <FileDownloadOutlined />
+            </IconButton>
+          </Tooltip>
+          </div>
 
           {userRole === "Admin" && (
             <div className="action-buttons">
@@ -440,7 +488,7 @@ const SalesData: React.FC = () => {
                   color: "black",
                   border: "none",
                   "&:hover": { backgroundColor: "#EC7A1C", color: "white" },
-                  padding: "8px 25px",
+                  padding: "8px 20px",
                 }}
                 onClick={handleAddRecord}
                 startIcon={<AddOutlined />}
@@ -481,9 +529,20 @@ const SalesData: React.FC = () => {
           )}
         </div>
 
-        {/* Filters */}
-        {showFilters && (
-          <div className="filter-bar" style={{ marginTop: 10, marginBottom: 10 }}>
+        <Popover
+          open={isFilterOpen}
+          anchorEl={filterAnchorEl}
+          onClose={handleFilterClose}
+          anchorOrigin={{
+            vertical: "bottom",
+            horizontal: "left",
+          }}
+          transformOrigin={{
+            vertical: "top",
+            horizontal: "left",
+          }}
+        >
+          <Box sx={{ p: 2, display: "flex", alignItems: "center" }}>
             <FormControl size="small" sx={{ mr: 2, minWidth: 120 }}>
               <InputLabel>Year</InputLabel>
               <Select
@@ -518,11 +577,21 @@ const SalesData: React.FC = () => {
 
             <Button
               variant="outlined"
-              sx={{ mr: 1 }}
               onClick={() => {
                 setAppliedFilterYear(filterYear);
                 setAppliedFilterOrderType(filterOrderType);
                 setPage(0);
+                handleFilterClose();
+              }}
+              sx={{
+                mr: 1,
+                color: "#EC7A1C",
+                borderColor: "#EC7A1C",
+                "&:hover": {
+                  backgroundColor: "#EC7A1C",
+                  color: "white",
+                  borderColor: "#EC7A1C",
+                },
               }}
             >
               Apply Filter
@@ -536,12 +605,59 @@ const SalesData: React.FC = () => {
                 setAppliedFilterYear("All");
                 setAppliedFilterOrderType("All");
                 setPage(0);
+                handleFilterClose();
+              }}
+              sx={{
+                color: "#EC7A1C",
+                borderColor: "#EC7A1C",
+                "&:hover": { 
+                  backgroundColor: "#EC7A1C",
+                  color: "white",
+                  borderColor: "#EC7A1C", 
+                },
               }}
             >
               Clear Filter
             </Button>
-          </div>
-        )}
+          </Box>
+        </Popover>
+
+        <Box sx={{ position: "relative" }}>
+          {loading && (
+            <Box
+              sx={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                height: "100%",
+                backgroundColor: "rgba(255, 255, 255, 0.7)",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                zIndex: 10, 
+                borderRadius: "8px", 
+              }}
+            >
+              <Typography variant="body2" sx={{ color: "#EC7A1C" }}>
+                Loading all {salesData.length || "…"} records ({progress.toFixed(0)}%)
+              </Typography>
+              <LinearProgress
+                variant="determinate"
+                value={progress}
+                sx={{
+                  height: 8,
+                  borderRadius: 5,
+                  backgroundColor: "#fcd5beff",
+                  "& .MuiLinearProgress-bar": { backgroundColor: "#EC7A1C" },
+                  width: "70%",
+                  maxWidth: "100%",
+                  mt: 1,
+                }}
+              />
+            </Box>
+          )}
 
         {/* Table */}
         <div className="table-container">
@@ -550,6 +666,11 @@ const SalesData: React.FC = () => {
               <tr>
                 <th>
                   <Checkbox
+                    sx={{
+                      color: "#9ca3af",
+                      "&.Mui-checked": { color: "white" },
+                      "&.MuiCheckbox-indeterminate": { color: "white" },
+                    }}
                     checked={
                       selectedRecords.size > 0 &&
                       selectedRecords.size === paginatedData.length
@@ -581,6 +702,10 @@ const SalesData: React.FC = () => {
                 <tr key={r.id}>
                   <td>
                     <Checkbox
+                      sx={{
+                        color: "gray",
+                        "&.Mui-checked": { color: "#EC7A1C" },
+                      }}
                       checked={selectedRecords.has(r.id)}
                       onChange={(e) => {
                         const newSel = new Set(selectedRecords);
@@ -663,6 +788,7 @@ const SalesData: React.FC = () => {
             </tfoot>
           </table>
         </div>
+        </Box>
       </div>
     </div>
   );
