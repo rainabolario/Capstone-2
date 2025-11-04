@@ -21,6 +21,7 @@ interface OrderItem {
   size: string
   qty: number
   price: number
+  variant_id?: number; // ✅ optional, if you’ll populate it later
 }
 
 interface FormData {
@@ -83,57 +84,133 @@ export default function AddRecord({ onLogout }: AddRecordProps) {
   const handleBack = () => setActiveStep((prev) => prev - 1)
 
   // Updated: submit now inserts into raw_orders (one per item) and relies on backend triggers
-  const handleSubmit = async () => {
-    try {
-      console.log("Submitting", formData)
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-      // Validate essential fields quickly
-      if (!formData.customer.name || formData.items.length === 0) {
-        alert("Please provide at least one item and a customer name.")
-        return
-      }
+const handleSubmit = async () => {
+  if (isSubmitting) return;
+  setIsSubmitting(true);
 
-      // Determine date/time formatting if provided
-      const orderDate = formData.customer.date ? formData.customer.date.format("YYYY-MM-DD") : null
-
-      const orderTime = formData.customer.time ? formData.customer.time.format("HH:mm:ss") : null
-
-      // For each item, insert a separate raw_order row
-      for (const item of formData.items) {
-        const rawOrder = {
-          name: formData.customer.name,
-          time: orderTime,
-          date: orderDate,
-          day: formData.customer.date ? formData.customer.date.format("dddd") : null,
-          item: item.name,
-          item_size: item.size,
-          order_type: item.category,
-          quantity: item.qty,
-          medium: formData.customer.orderMode,
-          mop: formData.customer.paymentMode,
-        }
-
-        const { error } = await supabase.from("raw_orders").insert([rawOrder])
-        if (error) throw error
-      }
-
-      alert("✅ Raw orders inserted. Backend will normalize and populate other tables via triggers.")
-      setActiveStep(0)
-      setFormData({
-        customer: {
-          name: "",
-          date: null,
-          time: null,
-          paymentMode: "",
-          orderMode: "",
-        },
-        items: [],
-      })
-    } catch (err: any) {
-      console.error("❌ Error saving raw orders", err?.message || err)
-      alert("❌ Error saving raw orders. Check the console for details.")
+  try {
+    console.log("Submitting", formData);
+    if (!formData.customer.name || formData.items.length === 0) {
+      alert("Please provide at least one item and a customer name.");
+      return;
     }
+
+    const orderDate = formData.customer.date
+      ? formData.customer.date.format("YYYY-MM-DD")
+      : null;
+    const orderTime = formData.customer.time
+      ? formData.customer.time.format("HH:mm:ss")
+      : null;
+
+    // 1️⃣ Get or create customer ID
+const { data: existingCustomer } = await supabase
+  .from("customers")
+  .select("id")
+  .eq("name", formData.customer.name)
+  .maybeSingle();
+
+let customerId = existingCustomer?.id;
+
+if (!customerId) {
+  const { data: newCustomer, error: newCustomerError } = await supabase
+    .from("customers")
+    .insert([{ name: formData.customer.name }])
+    .select("id")
+    .single();
+
+  if (newCustomerError) throw newCustomerError;
+  if (!newCustomer) throw new Error("Customer insert failed.");
+
+  customerId = newCustomer.id;
+}
+
+// 2️⃣ Look up foreign key IDs for mop and medium
+const { data: medium } = await supabase
+  .from("medium")
+  .select("id")
+  .eq("name", formData.customer.orderMode)
+  .single();
+
+const { data: mop } = await supabase
+  .from("mop")
+  .select("id")
+  .eq("name", formData.customer.paymentMode)
+  .single();
+
+// 3️⃣ Compute total manually
+const totalAmount = formData.items.reduce(
+  (sum, item) => sum + item.price * item.qty,
+  0
+);
+
+// 4️⃣ Insert order with real IDs and computed total
+const { data: orderData, error: orderError } = await supabase
+  .from("orders")
+  .insert([
+    {
+      customer_id: customerId,
+      order_date: orderDate,
+      order_time: orderTime,
+      order_mode: formData.customer.orderMode,  // <--- add this
+      mop_id: mop?.id || null,
+      medium_id: medium?.id || null,
+      total_amount: totalAmount,
+    },
+  ])
+  .select("id")
+  .single();
+
+    if (orderError) throw orderError;
+    const orderId = orderData.id;
+
+    // After inserting into orders and getting orderId
+    const receiptDate = formData.customer.date
+      ? formData.customer.date.format("YYYY-MM-DD")
+      : new Date().toISOString().split("T")[0]; // fallback to today
+
+    const { error: receiptError } = await supabase
+      .from("receipt_totals")
+      .insert([
+        {
+          order_id: orderId,
+          receipt_date: receiptDate,
+          receipt_total: totalAmount,
+        },
+      ]);
+
+    if (receiptError) throw receiptError;
+
+    const orderItems = formData.items.map((item) => ({
+      order_id: orderId,
+      variant_id: item.variant_id,
+      quantity: item.qty,
+      subtotal: item.price * item.qty,
+    }));
+
+    const { error } = await supabase.from("order_items").insert(orderItems);
+    if (error) throw error;
+
+    alert("✅ Order and items inserted successfully!");
+    setActiveStep(0);
+    setFormData({
+      customer: {
+        name: "",
+        date: null,
+        time: null,
+        paymentMode: "",
+        orderMode: "",
+      },
+      items: [],
+    });
+  } catch (err: any) {
+    console.error("❌ Error saving order", err?.message || err);
+    alert("❌ Error saving order. Check console for details.");
+  } finally {
+    setIsSubmitting(false);
   }
+};
 
   return (
     <div className="add-record-container">

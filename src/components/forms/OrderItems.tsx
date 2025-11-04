@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   Box,
   Button,
@@ -27,6 +27,7 @@ interface OrderItem {
   size: string;
   qty: number;
   price: number;
+  variant_id?: number; // <-- Add this
 }
 
 interface Props {
@@ -67,6 +68,8 @@ export default function OrderItems({ data, onChange }: Props) {
   const [complexItemParts, setComplexItemParts] = useState<string[]>(["", ""]);
   const [customItemPrice, setCustomItemPrice] = useState(0);
   const [hasSizes, setHasSizes] = useState(true);
+
+  const [activeVariantPrice, setActiveVariantPrice] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -162,6 +165,34 @@ export default function OrderItems({ data, onChange }: Props) {
     }
   }, [selectedCategoryId, isComplexCategory, hasSizes, categories]);
 
+  useEffect(() => {
+  if (!selectedMenuItemId || !selectedSizeId) {
+    setActiveVariantPrice(null);
+    return;
+  }
+
+  const fetchVariant = async () => {
+    const { data: variantData, error } = await supabase
+      .from("menu_item_variants")
+      .select("id, price, is_active")
+      .eq("menu_item_id", Number(selectedMenuItemId))
+      .eq("size_id", Number(selectedSizeId))
+      .single();
+
+    if (error) {
+      console.error("Error fetching variant:", error);
+      setActiveVariantPrice(null);
+    } else if (variantData) {
+      setActiveVariantPrice(variantData.is_active ? variantData.price : null);
+      if (!variantData.is_active) {
+        setCustomItemPrice(0); // allow typing
+      }
+    }
+  };
+
+  fetchVariant();
+}, [selectedMenuItemId, selectedSizeId]);
+
   const handleComplexItemChange = (index: number, value: string) => {
     const newParts = [...complexItemParts];
     newParts[index] = value.toUpperCase();
@@ -186,7 +217,7 @@ export default function OrderItems({ data, onChange }: Props) {
     .filter((p) => p) // Filter out empty strings
     .join(" + "); 
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     const category = categories.find((c) => c.id === Number(selectedCategoryId));
     if (!category) {
       alert("Please select a category.");
@@ -196,50 +227,87 @@ export default function OrderItems({ data, onChange }: Props) {
       alert("Quantity must be at least 1.");
       return;
     }
-    if (customItemPrice <= 0) {
+
+    const priceToUse = activeVariantPrice ?? customItemPrice;
+
+    if (priceToUse <= 0) {
       alert("Please enter a price greater than 0.");
       return;
     }
 
+    // if (customItemPrice <= 0) {
+    //   alert("Please enter a price greater than 0.");
+    //   return;
+    // }
+
+    // Fetch the correct variant_id from menu_item_variants
+    let variant_id: number | null = null;
+
+    if (!isComplexCategory && hasSizes) {
+  const { data: variantData, error: variantError } = await supabase
+    .from("menu_item_variants")
+    .select("id, price, is_active")
+    .eq("menu_item_id", Number(selectedMenuItemId))
+    .eq("size_id", Number(selectedSizeId))
+    .single();
+
+  if (variantError) {
+    console.error("Error fetching variant:", variantError);
+    setActiveVariantPrice(null);
+  } else if (variantData) {
+    variant_id = variantData.id;
+    if (variantData.is_active) {
+      setActiveVariantPrice(variantData.price); // ✅ set the active price
+    } else {
+      setActiveVariantPrice(null); // variant not active, allow typing
+    }
+  }
+} else {
+  setActiveVariantPrice(null); // complex item or no size
+}
+
+
     let newItem: OrderItem;
     if (isComplexCategory) {
-      if (!joinedComplexName) {
-        alert("Please enter an item name.");
-        return;
-      }
+  if (!joinedComplexName) {
+    alert("Please enter an item name.");
+    return;
+  }
 
-      newItem = {
-        category: category.name,
-        name: joinedComplexName,
-        size: "N/A",
-        qty: selectedQty,
-        price: customItemPrice,
-      };
-    } else {
-      const menuItem = menuItems.find((i) => i.id === Number(selectedMenuItemId));
-      if (!menuItem) {
-        alert("Please fill in all required fields: Item Name.");
-        return;
-      }
+  newItem = {
+    category: category.name,
+    name: joinedComplexName,
+    size: "N/A",
+    qty: selectedQty,
+    price: priceToUse,
+    variant_id: variant_id || undefined, // OK for complex items
+  };
+} else {
+  const menuItem = menuItems.find((i) => i.id === Number(selectedMenuItemId));
+  if (!menuItem) {
+    alert("Please fill in all required fields: Item Name.");
+    return;
+  }
 
-      let sizeName = "N/A";
-      if (hasSizes) {
-        const size = categorySizes.find((s) => s.id === Number(selectedSizeId));
-        if (!size) {
-          alert("Please fill in all required fields: Size.");
-          return;
-        }
-        sizeName = size.size;
-      }
-
-      newItem = {
-        category: category.name,
-        name: menuItem.name,
-        size: sizeName,
-        qty: selectedQty,
-        price: customItemPrice,
-      };
+  let sizeName = "N/A";
+  if (hasSizes) {
+    const size = categorySizes.find((s) => s.id === Number(selectedSizeId));
+    if (!size) {
+      alert("Please fill in all required fields: Size.");
+      return;
     }
+    sizeName = size.size;
+  }
+
+  newItem = {
+    category: category.name,
+    name: menuItem.name,
+    size: sizeName,
+    qty: selectedQty,
+    price: priceToUse,
+    variant_id: variant_id || undefined, // ✅ Assign variant_id here too
+  };
+}
 
     onChange([...data, newItem]);
     setSelectedCategoryId("");
@@ -288,8 +356,13 @@ export default function OrderItems({ data, onChange }: Props) {
   };
 
   const isNormalFlowInvalid =
-    !selectedMenuItemId || (hasSizes && !selectedSizeId) || customItemPrice <= 0;
-  const isComplexFlowInvalid = !joinedComplexName || customItemPrice <= 0;
+  !selectedMenuItemId || // Item must be selected
+  (hasSizes && !selectedSizeId) || // Size must be selected if applicable
+  (activeVariantPrice === null && customItemPrice <= 0); // Price required if no active variant
+
+  const isComplexFlowInvalid =
+  !joinedComplexName || // Name must be entered
+  (activeVariantPrice === null && customItemPrice <= 0); // Price required if no active variant
 
   return (
     <div className="order-items-container">
@@ -445,13 +518,14 @@ export default function OrderItems({ data, onChange }: Props) {
             <TextField
               type="number"
               label="Price per Item (₱)"
-              value={customItemPrice === 0 ? "" : customItemPrice}
+              value={activeVariantPrice ?? customItemPrice}
               onChange={(e) => setCustomItemPrice(Number(e.target.value))}
               sx={{ mb: 2, width: "100%" }}
               InputLabelProps={{ shrink: true }}
               inputProps={{ min: 0 }}
-              disabled={!selectedCategoryId}
+              disabled={activeVariantPrice !== null} // read-only if active variant
             />
+
             {(() => {
               const isButtonDisabled =
                 !selectedCategoryId ||
@@ -459,26 +533,26 @@ export default function OrderItems({ data, onChange }: Props) {
 
               return (
                 <Button
-                  variant={isButtonDisabled ? "outlined" : "contained"}
-                  startIcon={<AddShoppingCartIcon />}
-                  onClick={handleAdd}
-                  sx={
-                    isButtonDisabled
-                      ? { 
-                          borderColor: 'rgba(0, 0, 0, 0.26)',
-                          color: 'rgba(0, 0, 0, 0.26)'
-                        } 
-                      : {
-                          backgroundColor: "#EC7A1C",
-                          "&:hover": {
-                            backgroundColor: "#d66c10",
-                          },
-                        }
-                  }
-                  disabled={isButtonDisabled}
-                >
-                  {data.length === 0 ? "Add To Cart" : "Add Another Item"}
-                </Button>
+  variant={isButtonDisabled ? "outlined" : "contained"}
+  startIcon={<AddShoppingCartIcon />}
+  onClick={handleAdd}
+  sx={
+    isButtonDisabled
+      ? {
+          borderColor: 'rgba(0, 0, 0, 0.26)',
+          color: 'rgba(0, 0, 0, 0.26)'
+        }
+      : {
+          backgroundColor: "#EC7A1C",
+          "&:hover": {
+            backgroundColor: "#d66c10",
+          },
+        }
+  }
+  disabled={isButtonDisabled}
+>
+  {data.length === 0 ? "Add To Cart" : "Add Another Item"}
+</Button>
               );
             })()}
           </div>
