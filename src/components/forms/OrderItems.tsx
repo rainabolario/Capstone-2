@@ -185,9 +185,9 @@ export default function OrderItems({ data, onChange }: Props) {
     const priceToUse = activePrice ?? customItemPrice;
     if (priceToUse <= 0) return alert("Please enter a price greater than 0.");
 
-    // Determine item name
     let itemName = "";
     let matchedMenuItem: MenuItemData | null = null;
+    let variantId: number | undefined = undefined;
 
     if (isComplexCategory) {
       const parts = complexItemParts.map(p => p.trim()).filter(p => p);
@@ -197,38 +197,50 @@ export default function OrderItems({ data, onChange }: Props) {
       const menuItem = menuItems.find(i => i.id === Number(selectedMenuItemId));
       if (!menuItem) return alert("Please select an item.");
       itemName = menuItem.name;
-
-      // Fetch menu_item_variant using size
-      const { error } = await supabase
-        .from("menu_item_variants")
-        .select("id")
-        .eq("menu_item_id", menuItem.id)
-        .eq("size_id", Number(selectedSizeId))
-        .limit(1)
-        .single();
-
-      if (error && error.code !== "PGRST116") console.error(error);
       matchedMenuItem = menuItem;
-    }
 
-    // Get variant_id
-    let variantId: number | undefined = undefined;
-    if (!isComplexCategory && matchedMenuItem) {
-      const { data: variantData, error: variantError } = await supabase
-        .from("menu_item_variants")
-        .select("id")
-        .eq("menu_item_id", matchedMenuItem.id)
-        .eq("size_id", Number(selectedSizeId))
-        .limit(1)
-        .single();
+      // 🔹 Get or create variant_id
+      try {
+        // Try to find existing variant
+        const { data: variantData, error: variantError } = await supabase
+          .from("menu_item_variants")
+          .select("id")
+          .eq("menu_item_id", menuItem.id)
+          .eq("size_id", Number(selectedSizeId))
+          .limit(1)
+          .single();
 
-      if (!variantError && variantData) variantId = variantData.id;
+        if (variantData) {
+          variantId = variantData.id;
+        } else if (variantError?.code === "PGRST116") {
+          // Variant not found — create it automatically
+          const { data: newVariant, error: insertError } = await supabase
+            .from("menu_item_variants")
+            .insert({
+              menu_item_id: menuItem.id,
+              size_id: Number(selectedSizeId),
+              price: priceToUse,
+              is_active: true,
+            })
+            .select("id")
+            .single();
+
+          if (insertError) console.error("Error creating variant:", insertError);
+          else variantId = newVariant.id;
+        } else if (variantError) {
+          console.error("Error fetching variant:", variantError);
+        }
+      } catch (err) {
+        console.error("Unexpected error with variant lookup:", err);
+      }
     }
 
     const newItem: OrderItem = {
       category: category.name,
       name: itemName,
-      size: hasSizes ? categorySizes.find(s => s.id === Number(selectedSizeId))?.size || "N/A" : "N/A",
+      size: hasSizes
+        ? categorySizes.find(s => s.id === Number(selectedSizeId))?.size || "N/A"
+        : "N/A",
       qty: selectedQty,
       price: priceToUse,
       variant_id: variantId,
@@ -236,7 +248,7 @@ export default function OrderItems({ data, onChange }: Props) {
 
     onChange([...data, newItem]);
 
-    // Reset fields
+    // Reset UI
     setSelectedCategoryId("");
     setSelectedMenuItemId("");
     setSelectedSizeId("");
