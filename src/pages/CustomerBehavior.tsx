@@ -24,7 +24,7 @@ const CustomerBehavior: React.FC<CustomerBehaviorProps> = ({ onLogout }) => {
 
                     <div className="tableau-responsive-wrapper">
                         <iframe
-                            src="https://prod-apsoutheast-b.online.tableau.com/t/iambeastar-ed66b6ed6a/views/KCSKITCHENDASHBOARD/CustomerBehave?:embed=y&:toolbar=no"
+                            src="https://prod-apsoutheast-b.online.tableau.com/t/kcsanalyticssystem-bca8df11cc/views/051125_PDS/CUSTOMER?:embed=y&:toolbar=no"
                             className="tableau-iframe"
                             frameBorder="0"
                         ></iframe>

@@ -26,7 +26,7 @@ const MarketBasket: React.FC<MarketBasketProps> = ({ onLogout }) => {
 
         <div className="tableau-responsive-wrapper">
             <iframe
-                src="https://prod-apsoutheast-b.online.tableau.com/t/iambeastar-ed66b6ed6a/views/KCSKITCHENDASHBOARD/ProductPerform?:embed=y&:toolbar=no"
+                src="https://prod-apsoutheast-b.online.tableau.com/t/kcsanalyticssystem-bca8df11cc/views/051125_PDS/PRODUCT?:embed=y&:toolbar=no"
                 className="tableau-iframe"
                 frameBorder="0"
             ></iframe>
