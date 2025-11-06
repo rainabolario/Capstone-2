@@ -49,11 +49,12 @@ interface MOPOption {
   name: string
 }
 
+// ✅ Fixed: this describes ONE record, not an array
 interface VariantData {
   id: number
   price: number
-  menu_items: { name: string; category_id: number }
-  category_sizes: { size: string }
+  menu_items: { name: string; category_id: number } | null
+  category_sizes: { size: string } | null
 }
 
 const NO_SIZE_CATEGORIES = ["STREET FOOD", "PACKED MEAL", "CATERING"]
@@ -112,7 +113,7 @@ const EditRecord: React.FC<EditRecordProps> = ({ onLogout }) => {
           .eq("id", orderId)
           .single()
 
-        const data = res.data
+        const data = res.data as any
         if (!data) throw res.error || new Error("No order found")
 
         const orderItem = data.order_items?.find((oi: any) => oi.id === orderItemId)
@@ -167,18 +168,19 @@ const EditRecord: React.FC<EditRecordProps> = ({ onLogout }) => {
             category_sizes ( size )
           `)
 
-        const variantData = variantsRes.data ?? []
+        // ✅ Fix: Tell TS this is an array of VariantData
+        const variantData = (variantsRes.data ?? []) as unknown as VariantData[]
 
         const categoryRes = await supabase.from("category").select("id, name")
         const categoryMap: Record<number, string> = {}
         categoryRes.data?.forEach((c) => (categoryMap[c.id] = c.name))
 
-        const formatted = variantData.map((v: VariantData) => ({
+        const formatted: VariantOption[] = variantData.map((v) => ({
           id: v.id,
           name: v.menu_items?.name ?? "",
           size: v.category_sizes?.size ?? "",
           price: v.price ?? 0,
-          category: categoryMap[v.menu_items?.category_id] ?? "",
+          category: categoryMap[v.menu_items?.category_id ?? -1] ?? "",
         }))
 
         setVariants(formatted)
@@ -196,6 +198,7 @@ const EditRecord: React.FC<EditRecordProps> = ({ onLogout }) => {
 
     fetchDropdowns()
   }, [])
+
 
   // ==============================
   // 🟠 Handle dropdown dependencies
