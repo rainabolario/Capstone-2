@@ -8,7 +8,7 @@ interface WhatIfAnalysisProps {
   onLogout: () => void;
 }
 
-const WhatIfAnalysis: React.FC<WhatIfAnalysisProps> = ({ currentUser, onLogout }) => {
+const WhatIfAnalysis: React.FC<WhatIfAnalysisProps> = ({ onLogout }) => {
   return (
     <div className="whatif-container">
       <Sidebar onLogout={onLogout} />

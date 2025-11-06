@@ -22,10 +22,12 @@ interface SalesRecord {
 }
 
 interface Props {
-  fetchSalesData: () => Promise<void>; // passed from SalesData page
+  fetchSalesData: () => Promise<void>;
+  onLogout: () => void;
 }
 
-const ArchivedData: React.FC<Props> = ({ fetchSalesData }) => {
+
+const ArchivedData: React.FC<Props> = ({ fetchSalesData, onLogout }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [salesData, setSalesData] = useState<SalesRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -199,10 +201,6 @@ const ArchivedData: React.FC<Props> = ({ fetchSalesData }) => {
       String(val).toLowerCase().includes(searchTerm.toLowerCase())
     )
   );
-
-  function onLogout(): void {
-    throw new Error("Function not implemented.");
-  }
 
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>

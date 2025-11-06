@@ -16,7 +16,7 @@ interface User {
   id: string; 
   name: string;
   email: string;
-  role: "Admin" | "Staff";
+  role: "Admin" | "Staff" | string;
   password?: string;
 }
 

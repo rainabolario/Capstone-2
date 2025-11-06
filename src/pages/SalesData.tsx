@@ -45,7 +45,11 @@ interface SalesRecord {
   archived?: boolean;
 }
 
-const SalesData: React.FC = () => {
+interface SalesDataProps {
+  onLogout: () => void;
+}
+
+const SalesData: React.FC<SalesDataProps> = ({ }) => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [salesData, setSalesData] = useState<SalesRecord[]>([]);
@@ -159,7 +163,7 @@ const SalesData: React.FC = () => {
           day: dayStr,
           item: item.variant?.menu_item?.name || "N/A",
           itemSize: item.variant?.size?.size || "N/A",
-          orderType: item.orders?.order_mode || "N/A",
+          orderType: item.orders?.order_mode, 
           quantity: item.quantity || 0,
           medium: item.orders?.medium?.name || "N/A",
           mop: item.orders?.mop?.name || "N/A",

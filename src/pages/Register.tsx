@@ -14,6 +14,13 @@ import { supabase } from "../supabaseClient";
 
 interface RegisterProps {
   onClose: () => void;
+  onSubmit: (newUser: {
+    id: string;
+    name: string;
+    email: string;
+    role: "Admin" | "Staff" | string;
+    is_active?: boolean;
+  }) => void;
 }
 
 const Register: React.FC<RegisterProps> = ({ onClose }) => {

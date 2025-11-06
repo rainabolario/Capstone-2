@@ -10,6 +10,10 @@ import Register from "./Register";
 import EditUserModal from "./EditAccount";
 import { supabase } from "../supabaseClient";
 
+interface UserManagementProps {
+  onLogout?: () => void;
+}
+
 interface User {
   id: string;
   name: string;
@@ -18,7 +22,7 @@ interface User {
   is_active?: boolean;
 }
 
-const UserManagement: React.FC = () => {
+const UserManagement: React.FC<UserManagementProps> = ({ }) => {
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
@@ -59,9 +63,6 @@ const UserManagement: React.FC = () => {
         u.email?.toLowerCase().includes(searchTerm.toLowerCase())) &&
       u.is_active !== false // ✅ Hide deactivated users
   );
-
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) =>
-    setSearchTerm(e.target.value);
 
   const handleSelectUser = (id: string) => {
     setSelectedUsers((prev) => {
@@ -303,7 +304,7 @@ const UserManagement: React.FC = () => {
       {openRegister && (
         <Register
           onClose={() => setOpenRegister(false)}
-          onSubmit={(newUser) => {
+          onSubmit={(newUser: User) => {
             setUsers((prev) => [
               ...prev,
               { ...newUser, role: newUser.role as "Admin" | "Staff" },

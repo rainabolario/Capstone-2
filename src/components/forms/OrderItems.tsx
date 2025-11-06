@@ -199,7 +199,7 @@ export default function OrderItems({ data, onChange }: Props) {
       itemName = menuItem.name;
 
       // Fetch menu_item_variant using size
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from("menu_item_variants")
         .select("id")
         .eq("menu_item_id", menuItem.id)

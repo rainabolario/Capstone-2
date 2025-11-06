@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import Login from "./pages/Login";
+import Login from "./pages/login";
 import SalesOverview from "./pages/SalesOverview";
 import SalesForecast from "./pages/SalesForecast";
 import CustomerBehavior from "./pages/CustomerBehavior";
@@ -130,7 +130,9 @@ function App() {
           path="/archive-data"
           element={
             <ProtectedRoute allowedRoles={["Admin", "Staff"]}>
-              <ArchiveData onLogout={handleLogout} />
+              <ArchiveData onLogout={handleLogout} fetchSalesData={function (): Promise<void> {
+                throw new Error("Function not implemented.");
+              } } />
             </ProtectedRoute>
           }
         />
