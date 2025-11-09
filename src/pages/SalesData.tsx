@@ -29,15 +29,14 @@ import {
 } from "@mui/material";
 
 interface SalesRecord {
-  id: string;           // order_items.id
-  ordersId: string;     // parent orders.id
+  id: string;
+  ordersId: string;
   name: string;
   time: string;
   date: string;
   day: string;
   item: string;
   itemSize: string;
-  orderType: string;
   quantity: number;
   medium: string;
   mop: string;
@@ -45,11 +44,7 @@ interface SalesRecord {
   archived?: boolean;
 }
 
-interface SalesDataProps {
-  onLogout: () => void;
-}
-
-const SalesData: React.FC<SalesDataProps> = ({ }) => {
+const SalesData: React.FC = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [salesData, setSalesData] = useState<SalesRecord[]>([]);
@@ -58,9 +53,7 @@ const SalesData: React.FC<SalesDataProps> = ({ }) => {
   const [progress, setProgress] = useState(0);
   const [page, setPage] = useState(0);
   const [filterYear, setFilterYear] = useState<string>("All");
-  const [filterOrderType, setFilterOrderType] = useState<string>("All");
   const [appliedFilterYear, setAppliedFilterYear] = useState<string>("All");
-  const [appliedFilterOrderType, setAppliedFilterOrderType] = useState<string>("All");
   const [filterAnchorEl, setFilterAnchorEl] = useState<HTMLButtonElement | null>(null);
 
   const pageSize = 100;
@@ -70,217 +63,175 @@ const SalesData: React.FC<SalesDataProps> = ({ }) => {
   // 🔹 Fetch all order_items in batches
   // ============================================================
   const fetchAllSales = async () => {
-  try {
-    setLoading(true);
-    setProgress(0);
+    try {
+      setLoading(true);
+      setProgress(0);
 
-    const batchSize = 1000;
-    let allRows: any[] = [];
-    let from = 0;
-    let to = batchSize - 1;
+      const batchSize = 1000;
+      let allRows: any[] = [];
+      let from = 0;
+      let to = batchSize - 1;
 
-    while (true) {
-      const { data, error, count } = await supabase
-        .from("order_items")
-        .select(
-          `
-          id,
-          quantity,
-          subtotal,
-          orders (
+      while (true) {
+        const { data, error, count } = await supabase
+          .from("order_items")
+          .select(
+            `
             id,
-            order_date,
-            order_time,
-            order_mode,
-            total_amount,
-            medium:medium_id(name),
-            mop:mop_id(name),
-            customer:customer_id(name),
-            is_active
-          ),
-          variant:variant_id (
-            id,
-            price,
-            menu_item:menu_item_id (name),
-            size:category_sizes(size)
+            quantity,
+            subtotal,
+            orders (
+              id,
+              order_date,
+              order_time,
+              total_amount,
+              medium:medium_id(name),
+              mop:mop_id(name),
+              customer:customer_id(name),
+              is_active
+            ),
+            variant:variant_id (
+              id,
+              price,
+              menu_item:menu_item_id (name),
+              size:category_sizes(size)
+            )
+          `,
+            { count: "exact" }
           )
-        `,
-          { count: "exact" }
-        )
-        .order("id", { ascending: true })
-        .range(from, to);
+          .order("id", { ascending: true })
+          .range(from, to);
 
-      if (error) {
-        console.error("❌ Fetch error:", error);
-        break;
-      }
-
-      if (!data || data.length === 0) break;
-
-      allRows = allRows.concat(data);
-      from += batchSize;
-      to += batchSize;
-
-      const totalCount = count || 72600;
-      setProgress(Math.min((allRows.length / totalCount) * 100, 100));
-
-      if (data.length < batchSize) break;
-    }
-
-    console.log(`✅ Total rows fetched: ${allRows.length}`);
-
-    const formatted = allRows
-      .filter((item) => item.orders?.is_active !== false) // hide archived
-      .map((item) => {
-        // ---------------- Safe date parsing ----------------
-        const rawDate = item.orders?.order_date || "1970-01-01";
-        let parsedDate = new Date(rawDate);
-        if (isNaN(parsedDate.getTime())) parsedDate = new Date("1970-01-01");
-
-        // Format YYYY-MM-DD
-        const pad = (n: number) => n.toString().padStart(2, "0");
-        const dateStr = `${parsedDate.getFullYear()}-${pad(parsedDate.getMonth() + 1)}-${pad(parsedDate.getDate())}`;
-
-        // Local day name
-        const dayStr = parsedDate.toLocaleDateString("en-US", { weekday: "long" });
-
-        // ---------------- Safe time parsing ----------------
-        let timeStr = item.orders?.order_time || "00:00:00";
-        // Normalize to HH:MM:SS
-        const timeParts = timeStr.split(":");
-        if (timeParts.length === 3) {
-          timeStr = `${timeParts[0].padStart(2, "0")}:${timeParts[1].padStart(2, "0")}:${timeParts[2].padStart(2, "0")}`;
-        } else {
-          timeStr = "00:00:00";
+        if (error) {
+          console.error("❌ Fetch error:", error);
+          break;
         }
 
-        return {
-          id: item.id,
-          ordersId: item.orders?.id || "",
-          name: item.orders?.customer?.name || "N/A",
-          date: dateStr,
-          time: timeStr,
-          day: dayStr,
-          item: item.variant?.menu_item?.name || "N/A",
-          itemSize: item.variant?.size?.size || "N/A",
-          orderType: item.orders?.order_mode, 
-          quantity: item.quantity || 0,
-          medium: item.orders?.medium?.name || "N/A",
-          mop: item.orders?.mop?.name || "N/A",
-          total: Number(item.subtotal || item.orders?.total_amount || 0),
-        };
+        if (!data || data.length === 0) break;
+
+        allRows = allRows.concat(data);
+        from += batchSize;
+        to += batchSize;
+
+        const totalCount = count || 72600;
+        setProgress(Math.min((allRows.length / totalCount) * 100, 100));
+
+        if (data.length < batchSize) break;
+      }
+
+      const formatted = allRows
+        .filter((item) => item.orders?.is_active !== false)
+        .map((item) => {
+          const rawDate = item.orders?.order_date || "1970-01-01";
+          let parsedDate = new Date(rawDate);
+          if (isNaN(parsedDate.getTime())) parsedDate = new Date("1970-01-01");
+
+          const pad = (n: number) => n.toString().padStart(2, "0");
+          const dateStr = `${parsedDate.getFullYear()}-${pad(parsedDate.getMonth() + 1)}-${pad(parsedDate.getDate())}`;
+          const dayStr = parsedDate.toLocaleDateString("en-US", { weekday: "long" });
+
+          let timeStr = item.orders?.order_time || "00:00:00";
+          const timeParts = timeStr.split(":");
+          if (timeParts.length === 3) {
+            timeStr = `${timeParts[0].padStart(2, "0")}:${timeParts[1].padStart(2, "0")}:${timeParts[2].padStart(2, "0")}`;
+          } else {
+            timeStr = "00:00:00";
+          }
+
+          return {
+            id: item.id,
+            ordersId: item.orders?.id || "",
+            name: item.orders?.customer?.name || "N/A",
+            date: dateStr,
+            time: timeStr,
+            day: dayStr,
+            item: item.variant?.menu_item?.name || "N/A",
+            itemSize: item.variant?.size?.size || "N/A",
+            quantity: item.quantity || 0,
+            medium: item.orders?.medium?.name || "N/A",
+            mop: item.orders?.mop?.name || "N/A",
+            total: Number(item.subtotal || item.orders?.total_amount || 0),
+          };
+        });
+
+      formatted.sort((a, b) => {
+        const dtA = new Date(`${a.date}T${a.time}`).getTime() || 0;
+        const dtB = new Date(`${b.date}T${b.time}`).getTime() || 0;
+        return dtB - dtA;
       });
 
-    // Sort by date + time descending
-    formatted.sort((a, b) => {
-      const dtA = new Date(`${a.date}T${a.time}`).getTime() || 0;
-      const dtB = new Date(`${b.date}T${b.time}`).getTime() || 0;
-      return dtB - dtA;
-    });
+      setSalesData(formatted);
+      setProgress(100);
+    } catch (err) {
+      console.error("⚠️ Failed to fetch:", err);
+    } finally {
+      setTimeout(() => setLoading(false), 500);
+    }
+  };
 
-    setSalesData(formatted);
-    setProgress(100);
-  } catch (err) {
-    console.error("⚠️ Failed to fetch:", err);
-  } finally {
-    setTimeout(() => setLoading(false), 500);
-  }
-};
-
-  // ============================================================
-  // 🔹 Realtime refresh
-  // ============================================================
   useEffect(() => {
-    fetchAllSales();
-    const channel = supabase
-      .channel("realtime-orders")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "orders" },
-        fetchAllSales
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "order_items" },
-        fetchAllSales
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
+  fetchAllSales();
+  const channel = supabase
+    .channel("realtime-orders")
+    .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, fetchAllSales)
+    .on("postgres_changes", { event: "*", schema: "public", table: "order_items" }, fetchAllSales)
+    .subscribe();
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}, []);
 
-  // ============================================================
-  // 🔹 Admin actions
-  // ============================================================
+
   const handleAddRecord = () => {
     if (userRole === "Admin") navigate("/addrecord");
   };
 
   const handleEditRecord = () => {
-  if (userRole !== "Admin") {
-    alert("Only Admins can edit records.");
-    return;
-  }
+    if (userRole !== "Admin") {
+      alert("Only Admins can edit records.");
+      return;
+    }
 
-  if (selectedRecords.size !== 1) {
-    alert("Please select exactly one record to edit.");
-    return;
-  }
+    if (selectedRecords.size !== 1) {
+      alert("Please select exactly one record to edit.");
+      return;
+    }
 
-  const selectedId = Array.from(selectedRecords)[0];
-  const recordToEdit = salesData.find((r) => r.id === selectedId);
+    const selectedId = Array.from(selectedRecords)[0];
+    const recordToEdit = salesData.find((r) => r.id === selectedId);
+    if (!recordToEdit) return alert("Failed to find the selected record.");
 
-  if (!recordToEdit) {
-    alert("Failed to find the selected record.");
-    return;
-  }
-
-  // Compose ID as "ordersId-orderItemsId" to match EditRecord expectations
-  const composedId = `${recordToEdit.ordersId}-${recordToEdit.id}`;
-
-  // Pass record in state with the correct composed ID
-  navigate(`/editrecord/${composedId}`, {
-    state: { record: { ...recordToEdit, id: composedId } },
-  });
-};
+    const composedId = `${recordToEdit.ordersId}-${recordToEdit.id}`;
+    navigate(`/editrecord/${composedId}`, {
+      state: { record: { ...recordToEdit, id: composedId } },
+    });
+  };
 
   const handleArchiveRecord = async () => {
-  if (userRole !== "Admin") {
-    alert("Only Admins can archive records.");
-    return;
-  }
+    if (userRole !== "Admin") {
+      alert("Only Admins can archive records.");
+      return;
+    }
 
-  if (selectedRecords.size === 0) {
-    alert("Please select at least one record to archive.");
-    return;
-  }
+    if (selectedRecords.size === 0) {
+      alert("Please select at least one record to archive.");
+      return;
+    }
 
-  // Get orders IDs from selected rows
-  const orderIds = Array.from(selectedRecords)
-    .map((id) => salesData.find((r) => r.id === id)?.ordersId)
-    .filter(Boolean);
+    const orderIds = Array.from(selectedRecords)
+      .map((id) => salesData.find((r) => r.id === id)?.ordersId)
+      .filter(Boolean);
 
-  if (orderIds.length === 0) {
-    alert("No valid orders found to archive.");
-    return;
-  }
-
-  // ✅ Update is_active to false
-  const { error } = await supabase
-    .from("orders")
-    .update({ is_active: false })
-    .in("id", orderIds);
-
-  if (error) {
-    console.error("Error archiving:", error);
-    alert("Failed to archive records.");
-  } else {
-    alert("Records archived successfully!");
-    setSelectedRecords(new Set());
-    fetchAllSales(); // Refresh UI
-  }
-};
+    const { error } = await supabase.from("orders").update({ is_active: false }).in("id", orderIds);
+    if (error) {
+      console.error("Error archiving:", error);
+      alert("Failed to archive records.");
+    } else {
+      alert("Records archived successfully!");
+      setSelectedRecords(new Set());
+      fetchAllSales();
+    }
+  };
 
   // ============================================================
   // 🔹 Filters + Pagination
@@ -291,10 +242,7 @@ const SalesData: React.FC<SalesDataProps> = ({ }) => {
     );
     const matchesYear =
       appliedFilterYear === "All" || new Date(r.date).getFullYear().toString() === appliedFilterYear;
-    const matchesOrderType =
-      appliedFilterOrderType === "All" || r.orderType === appliedFilterOrderType;
-
-    return matchesSearch && matchesYear && matchesOrderType;
+    return matchesSearch && matchesYear;
   });
 
   const totalPages = Math.max(1, Math.ceil(filteredData.length / pageSize));
@@ -302,11 +250,7 @@ const SalesData: React.FC<SalesDataProps> = ({ }) => {
   const to = Math.min(filteredData.length, from + pageSize - 1);
   const paginatedData = filteredData.slice(from, to + 1);
   const rowCount = filteredData.length;
-
-  const uniqueYears = Array.from(
-    new Set(salesData.map((r) => new Date(r.date).getFullYear()))
-  ).sort((a, b) => b - a);
-  const uniqueOrderTypes = Array.from(new Set(salesData.map((r) => r.orderType))).sort();
+  const uniqueYears = Array.from(new Set(salesData.map((r) => new Date(r.date).getFullYear()))).sort((a, b) => b - a);
 
   // ============================================================
   // 🔹 Generate CSV
@@ -317,20 +261,7 @@ const SalesData: React.FC<SalesDataProps> = ({ }) => {
       return;
     }
 
-    const headers = [
-      "Date",
-      "Day",
-      "Time",
-      "Customer",
-      "Item",
-      "Size",
-      "Type",
-      "Qty",
-      "Medium",
-      "MOP",
-      "Total",
-    ];
-
+    const headers = ["Date", "Day", "Time", "Customer", "Item", "Size", "Qty", "Medium", "MOP", "Total"];
     const rows = filteredData.map((r) => [
       r.date,
       r.day,
@@ -338,18 +269,13 @@ const SalesData: React.FC<SalesDataProps> = ({ }) => {
       r.name,
       r.item,
       r.itemSize,
-      r.orderType,
       r.quantity,
       r.medium,
       r.mop,
       r.total.toFixed(2),
     ]);
 
-    const csvContent =
-      [headers, ...rows]
-        .map((e) => e.map((v) => `"${v}"`).join(","))
-        .join("\n");
-
+    const csvContent = [headers, ...rows].map((e) => e.map((v) => `"${v}"`).join(",")).join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -361,13 +287,9 @@ const SalesData: React.FC<SalesDataProps> = ({ }) => {
   };
 
   const handleFilterClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-  setFilterAnchorEl(event.currentTarget);
+    setFilterAnchorEl(event.currentTarget);
   };
-
-  const handleFilterClose = () => {
-    setFilterAnchorEl(null);
-  };
-
+  const handleFilterClose = () => setFilterAnchorEl(null);
   const isFilterOpen = Boolean(filterAnchorEl);
 
   // ============================================================
@@ -383,12 +305,8 @@ const SalesData: React.FC<SalesDataProps> = ({ }) => {
           </div>
         </div>
 
-        <Typography
-          variant="caption"
-          sx={{ color: "gray", fontSize: "14px", mb: 1, mt: 1 }}
-        >
-          Complete transaction details.{" "}
-          {userRole === "Admin" && "Admins can manage all records."}
+        <Typography variant="caption" sx={{ color: "gray", fontSize: "14px", mb: 1, mt: 1 }}>
+          Complete transaction details. {userRole === "Admin" && "Admins can manage all records."}
         </Typography>
 
         <Divider />
@@ -396,136 +314,94 @@ const SalesData: React.FC<SalesDataProps> = ({ }) => {
         {/* Action bar */}
         <div className="action-bar">
           <div className="search-filter-wrapper">
-          <TextField
-            size="small"
-            placeholder="Search..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            InputProps={{
-              startAdornment: <SearchIcon sx={{ color: "gray", mr: 1 }} />,
-            }}
-            sx={{ 
-              flex: 1, 
-              maxWidth: 250, 
-              mr: 1, 
-              "& .MuiOutlinedInput-root": {
-                backgroundColor: "white",
-                borderRadius: "8px",
-                "&.Mui-focused fieldset": {
-                  borderColor: "#EC7A1C",
-                },
-              }
-            }}
-          />
-
-          <Tooltip 
-            title="Show/Hide Filters" 
-            arrow
-            placement="top"
-            slotProps={{
-              tooltip: {
-                sx: {
-                  backgroundColor: "#EC7A1C",
-                  fontSize: "13px",
-                  color: "white"
-                },
-              },
-              popper: {
-                sx:{
-                  "& .MuiTooltip-arrow": {
-                    color: "#EC7A1C",
-                  },
-                },
-              },
-            }}
-          >
-            <IconButton
-              onClick={handleFilterClick}
-              sx={{
-                mr: 0.5,
-                color: "black",
-                "&:hover": { backgroundColor: "#EC7A1C", color: "white" },
+            <TextField
+              size="small"
+              placeholder="Search..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{
+                startAdornment: <SearchIcon sx={{ color: "gray", mr: 1 }} />,
               }}
-            >
-              <FilterListIcon />
-            </IconButton>
-          </Tooltip>
-
-          <Tooltip 
-            title="Generate CSV Report" 
-            arrow
-            placement="top"
-            slotProps={{
-              tooltip: {
-                sx: {
-                  backgroundColor: "#EC7A1C",
-                  fontSize: "13px",
-                  color: "white"
-                },
-              },
-              popper: {
-                sx:{
-                  "& .MuiTooltip-arrow": {
-                    color: "#EC7A1C",
-                  },
-                },
-              },
-            }}
-          >
-            <IconButton
-              onClick={generateCSV}
               sx={{
-                color: "black",
-                "&:hover": { backgroundColor: "#EC7A1C", color: "white" },
+                flex: 1,
+                maxWidth: 250,
+                mr: 1,
+                "& .MuiOutlinedInput-root": {
+                  backgroundColor: "white",
+                  borderRadius: "8px",
+                  "&.Mui-focused fieldset": { borderColor: "#EC7A1C" },
+                },
               }}
-            >
-              <FileDownloadOutlined />
-            </IconButton>
-          </Tooltip>
+            />
+
+            <Tooltip title="Show/Hide Filters" arrow placement="top">
+              <IconButton
+                onClick={handleFilterClick}
+                sx={{
+                  mr: 0.5,
+                  color: "black",
+                  "&:hover": { backgroundColor: "#EC7A1C", color: "white" },
+                }}
+              >
+                <FilterListIcon />
+              </IconButton>
+            </Tooltip>
+
+            <Tooltip title="Generate CSV Report" arrow placement="top">
+              <IconButton
+                onClick={generateCSV}
+                sx={{
+                  color: "black",
+                  "&:hover": { backgroundColor: "#EC7A1C", color: "white" },
+                }}
+              >
+                <FileDownloadOutlined />
+              </IconButton>
+            </Tooltip>
           </div>
 
           {userRole === "Admin" && (
             <div className="action-buttons">
               <Button
                 variant="outlined"
+                onClick={handleAddRecord}
+                startIcon={<AddOutlined />}
                 sx={{
                   color: "black",
                   border: "none",
                   "&:hover": { backgroundColor: "#EC7A1C", color: "white" },
                   padding: "8px 20px",
                 }}
-                onClick={handleAddRecord}
-                startIcon={<AddOutlined />}
               >
                 Add Record
               </Button>
 
               <Button
                 variant="outlined"
+                onClick={handleEditRecord}
+                startIcon={<EditOutlined />}
+                disabled={selectedRecords.size !== 1}
                 sx={{
                   color: "black",
                   border: "none",
                   "&:hover": { backgroundColor: "#EC7A1C", color: "white" },
                   padding: "8px 25px",
                 }}
-                onClick={handleEditRecord}
-                startIcon={<EditOutlined />}
-                disabled={selectedRecords.size !== 1}
               >
                 Edit Record
               </Button>
 
               <Button
                 variant="outlined"
+                onClick={handleArchiveRecord}
+                startIcon={<Inventory2Outlined />}
+                disabled={selectedRecords.size === 0}
                 sx={{
                   color: "black",
                   border: "none",
                   "&:hover": { backgroundColor: "#EC7A1C", color: "white" },
                   padding: "8px 25px",
                 }}
-                onClick={handleArchiveRecord}
-                startIcon={<Inventory2Outlined />}
-                disabled={selectedRecords.size === 0}
               >
                 Archive Record
               </Button>
@@ -537,14 +413,8 @@ const SalesData: React.FC<SalesDataProps> = ({ }) => {
           open={isFilterOpen}
           anchorEl={filterAnchorEl}
           onClose={handleFilterClose}
-          anchorOrigin={{
-            vertical: "bottom",
-            horizontal: "left",
-          }}
-          transformOrigin={{
-            vertical: "top",
-            horizontal: "left",
-          }}
+          anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+          transformOrigin={{ vertical: "top", horizontal: "left" }}
         >
           <Box sx={{ p: 2, display: "flex", alignItems: "center" }}>
             <FormControl size="small" sx={{ mr: 2, minWidth: 120 }}>
@@ -563,27 +433,10 @@ const SalesData: React.FC<SalesDataProps> = ({ }) => {
               </Select>
             </FormControl>
 
-            <FormControl size="small" sx={{ mr: 2, minWidth: 140 }}>
-              <InputLabel>Order Type</InputLabel>
-              <Select
-                value={filterOrderType}
-                label="Order Type"
-                onChange={(e) => setFilterOrderType(e.target.value)}
-              >
-                <MenuItem value="All">All</MenuItem>
-                {uniqueOrderTypes.map((ot) => (
-                  <MenuItem key={ot} value={ot}>
-                    {ot}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-
             <Button
               variant="outlined"
               onClick={() => {
                 setAppliedFilterYear(filterYear);
-                setAppliedFilterOrderType(filterOrderType);
                 setPage(0);
                 handleFilterClose();
               }}
@@ -591,11 +444,7 @@ const SalesData: React.FC<SalesDataProps> = ({ }) => {
                 mr: 1,
                 color: "#EC7A1C",
                 borderColor: "#EC7A1C",
-                "&:hover": {
-                  backgroundColor: "#EC7A1C",
-                  color: "white",
-                  borderColor: "#EC7A1C",
-                },
+                "&:hover": { backgroundColor: "#EC7A1C", color: "white" },
               }}
             >
               Apply Filter
@@ -605,20 +454,14 @@ const SalesData: React.FC<SalesDataProps> = ({ }) => {
               variant="outlined"
               onClick={() => {
                 setFilterYear("All");
-                setFilterOrderType("All");
                 setAppliedFilterYear("All");
-                setAppliedFilterOrderType("All");
                 setPage(0);
                 handleFilterClose();
               }}
               sx={{
                 color: "#EC7A1C",
                 borderColor: "#EC7A1C",
-                "&:hover": { 
-                  backgroundColor: "#EC7A1C",
-                  color: "white",
-                  borderColor: "#EC7A1C", 
-                },
+                "&:hover": { backgroundColor: "#EC7A1C", color: "white" },
               }}
             >
               Clear Filter
@@ -640,8 +483,8 @@ const SalesData: React.FC<SalesDataProps> = ({ }) => {
                 flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
-                zIndex: 10, 
-                borderRadius: "8px", 
+                zIndex: 10,
+                borderRadius: "8px",
               }}
             >
               <Typography variant="body2" sx={{ color: "#EC7A1C" }}>
@@ -663,42 +506,41 @@ const SalesData: React.FC<SalesDataProps> = ({ }) => {
             </Box>
           )}
 
-        {/* Table */}
-        <div className="table-container">
-          <table className="sales-table">
-            <thead>
-              <tr>
-                <th>
-                  <Checkbox
-                    sx={{
-                      color: "#9ca3af",
-                      "&.Mui-checked": { color: "white" },
-                      "&.MuiCheckbox-indeterminate": { color: "white" },
-                    }}
-                    checked={
-                      selectedRecords.size > 0 &&
-                      selectedRecords.size === paginatedData.length
-                    }
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedRecords(new Set(paginatedData.map((r) => r.id)));
-                      } else {
-                        setSelectedRecords(new Set());
+          {/* Table */}
+          <div className="table-container">
+            <table className="sales-table">
+              <thead>
+                <tr>
+                  <th>
+                    <Checkbox
+                      sx={{
+                        color: "#9ca3af",
+                        "&.Mui-checked": { color: "white" },
+                        "&.MuiCheckbox-indeterminate": { color: "white" },
+                      }}
+                      checked={
+                        selectedRecords.size > 0 &&
+                        selectedRecords.size === paginatedData.length
                       }
-                    }}
-                  />
-                </th>
-                <th>Date</th>
-                <th>Day</th>
-                <th>Time</th>
-                <th>Customer</th>
-                <th>Item</th>
-                <th>Size</th>
-                <th>Type</th>
-                <th>Qty</th>
-                <th>Medium</th>
-                <th>MOP</th>
-                <th>Total</th>
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedRecords(new Set(paginatedData.map((r) => r.id)));
+                        } else {
+                          setSelectedRecords(new Set());
+                        }
+                      }}
+                    />
+                  </th>
+                  <th>Date</th>
+                  <th>Day</th>
+                  <th>Time</th>
+                  <th>Customer</th>
+                  <th>Item</th>
+                  <th>Size</th>
+                  <th>Qty</th>
+                  <th>Medium</th>
+                  <th>MOP</th>
+                  <th>Total</th>
               </tr>
             </thead>
             <tbody>
@@ -724,7 +566,6 @@ const SalesData: React.FC<SalesDataProps> = ({ }) => {
                   <td>{r.name}</td>
                   <td>{r.item}</td>
                   <td>{r.itemSize}</td>
-                  <td>{r.orderType}</td>
                   <td>{r.quantity}</td>
                   <td>{r.medium}</td>
                   <td>{r.mop}</td>
