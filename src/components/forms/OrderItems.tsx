@@ -14,8 +14,8 @@ import {
   Typography,
   IconButton,
 } from "@mui/material";
+import type { SelectChangeEvent } from "@mui/material/Select";
 import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
-import type { SelectChangeEvent } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import "../../css/OrderItems.css";
@@ -51,7 +51,6 @@ export default function OrderItems({ data, onChange }: Props) {
   const [selectedMenuItemId, setSelectedMenuItemId] = useState("");
   const [selectedSizeId, setSelectedSizeId] = useState("");
   const [selectedQty, setSelectedQty] = useState(1);
-
   const [isComplexCategory, setIsComplexCategory] = useState(false);
   const [complexItemParts, setComplexItemParts] = useState<string[]>(["", ""]);
   const [customItemPrice, setCustomItemPrice] = useState(0);
@@ -100,6 +99,7 @@ export default function OrderItems({ data, onChange }: Props) {
           if (itemsError) throw itemsError;
 
           const itemIds = items.map(i => i.id);
+
           const { data: variants, error: variantsError } = await supabase
             .from("menu_item_variants")
             .select("size_id")
@@ -107,6 +107,7 @@ export default function OrderItems({ data, onChange }: Props) {
           if (variantsError) throw variantsError;
 
           const uniqueSizeIds = [...new Set(variants.map(v => v.size_id).filter(Boolean))];
+
           const { data: sizes, error: sizesError } = await supabase
             .from("category_sizes")
             .select("id, size")
@@ -127,12 +128,7 @@ export default function OrderItems({ data, onChange }: Props) {
 
   // --- FETCH PRICE FROM RAW_MENU OR USE TYPED PRICE ---
   useEffect(() => {
-    if (!selectedMenuItemId || (hasSizes && !selectedSizeId)) {
-      setActivePrice(null);
-      return;
-    }
-
-    if (isComplexCategory) {
+    if (!selectedMenuItemId || (hasSizes && !selectedSizeId) || isComplexCategory) {
       setActivePrice(null);
       return;
     }
@@ -163,6 +159,7 @@ export default function OrderItems({ data, onChange }: Props) {
     fetchRawMenuPrice();
   }, [selectedCategoryId, selectedMenuItemId, selectedSizeId, isComplexCategory, menuItems, hasSizes]);
 
+  // --- HANDLE COMPLEX ITEM ---
   const handleComplexItemChange = (index: number, value: string) => {
     const newParts = [...complexItemParts];
     newParts[index] = value.toUpperCase();
@@ -170,10 +167,12 @@ export default function OrderItems({ data, onChange }: Props) {
   };
 
   const addComplexItemField = () => setComplexItemParts([...complexItemParts, ""]);
+
   const removeComplexItemField = (indexToRemove: number) => {
     if (complexItemParts.length <= 2) return;
     setComplexItemParts(complexItemParts.filter((_, idx) => idx !== indexToRemove));
   };
+
   const joinedComplexName = complexItemParts.map(p => p.trim()).filter(p => p).join(" + ");
 
   // --- HANDLE ADD ITEM ---
@@ -186,85 +185,184 @@ export default function OrderItems({ data, onChange }: Props) {
     if (priceToUse <= 0) return alert("Please enter a price greater than 0.");
 
     let itemName = "";
-    let matchedMenuItem: MenuItemData | null = null;
-    let variantId: number | undefined = undefined;
+    let variantId: number | undefined;
 
-    if (isComplexCategory) {
-      const parts = complexItemParts.map(p => p.trim()).filter(p => p);
-      if (!parts.length) return alert("Please enter item parts.");
-      itemName = parts.join(" + ");
-    } else {
-      const menuItem = menuItems.find(i => i.id === Number(selectedMenuItemId));
-      if (!menuItem) return alert("Please select an item.");
-      itemName = menuItem.name;
-      matchedMenuItem = menuItem;
+    try {
+      if (isComplexCategory) {
+        // --- COMPLEX ITEM FLOW ---
+        const parts = complexItemParts.map(p => p.trim()).filter(p => p);
+        if (!parts.length) return alert("Please enter item parts.");
 
-      // 🔹 Get or create variant_id
-      try {
-        // Try to find existing variant
-        const { data: variantData, error: variantError } = await supabase
+        // 1️⃣ Main complex item name
+        itemName = parts.join(" + ");
+
+        // 2️⃣ Create or get main menu item for the complex name
+        let menuItemId: number;
+        const { data: existingMenuItem } = await supabase
+          .from("menu_items")
+          .select("id")
+          .eq("name", itemName)
+          .maybeSingle();
+
+        if (existingMenuItem) menuItemId = existingMenuItem.id;
+        else {
+          const { data: newMenuItem, error: newItemError } = await supabase
+            .from("menu_items")
+            .insert({ name: itemName, category_id: Number(selectedCategoryId) })
+            .select("id")
+            .single();
+          if (newItemError || !newMenuItem) throw new Error("Failed to create menu item for complex item");
+          menuItemId = newMenuItem.id;
+        }
+
+        // 3️⃣ If PACKED MEAL, upsert parts in packed_meal_items
+        if (category.name === "PACKED MEAL") {
+          // Ensure packed meal exists
+          const { data: existingMeal } = await supabase
+            .from("packed_meals")
+            .select("id")
+            .eq("name", itemName)
+            .maybeSingle();
+
+          let packedMealId: number;
+          if (existingMeal) packedMealId = existingMeal.id;
+          else {
+            const { data: newMeal, error: mealError } = await supabase
+              .from("packed_meals")
+              .insert({ name: itemName })
+              .select("id")
+              .single();
+            if (mealError || !newMeal) throw new Error("Failed to create packed meal");
+            packedMealId = newMeal.id;
+          }
+
+          // Link parts to the packed meal
+          for (const partName of parts) {
+            // Get menu item ID of the part (assume it exists)
+            const { data: partData, error: partError } = await supabase
+              .from("menu_items")
+              .select("id")
+              .eq("name", partName);
+
+            if (partError || !partData || partData.length === 0) continue;
+
+            const partMenuItemId = partData[0].id;
+
+            // Upsert into packed_meal_items
+            const { error: upsertError } = await supabase
+              .from("packed_meal_items")
+              .upsert(
+                [{ packed_meal_id: packedMealId, menu_item_id: partMenuItemId }],
+                { onConflict: "packed_meal_id,menu_item_id" }
+              );
+
+            if (upsertError) console.error("Failed to upsert packed_meal_items:", upsertError);
+          }
+        }
+
+        // 4️⃣ Upsert variant for the main complex item
+        const { data: existingVariant } = await supabase
           .from("menu_item_variants")
           .select("id")
-          .eq("menu_item_id", menuItem.id)
-          .eq("size_id", Number(selectedSizeId))
-          .limit(1)
-          .single();
+          .eq("menu_item_id", menuItemId)
+          .eq("size_id", hasSizes ? Number(selectedSizeId) : null)
+          .maybeSingle();
 
-        if (variantData) {
-          variantId = variantData.id;
-        } else if (variantError?.code === "PGRST116") {
-          // Variant not found — create it automatically
-          const { data: newVariant, error: insertError } = await supabase
+        if (existingVariant) variantId = existingVariant.id;
+        else {
+          const { data: newVariant, error: variantError } = await supabase
             .from("menu_item_variants")
             .insert({
-              menu_item_id: menuItem.id,
-              size_id: Number(selectedSizeId),
+              menu_item_id: menuItemId,
+              size_id: hasSizes ? Number(selectedSizeId) : null,
               price: priceToUse,
               is_active: true,
             })
             .select("id")
             .single();
-
-          if (insertError) console.error("Error creating variant:", insertError);
-          else variantId = newVariant.id;
-        } else if (variantError) {
-          console.error("Error fetching variant:", variantError);
+          if (variantError || !newVariant) throw new Error("Failed to create variant for complex item");
+          variantId = newVariant.id;
         }
-      } catch (err) {
-        console.error("Unexpected error with variant lookup:", err);
+
+        // 5️⃣ Add to order list
+        const newItem: OrderItem = {
+          category: category.name,
+          name: itemName,
+          size: hasSizes
+            ? categorySizes.find(s => s.id === Number(selectedSizeId))?.size || "N/A"
+            : "N/A",
+          qty: selectedQty,
+          price: priceToUse,
+          variant_id: variantId,
+        };
+        onChange([...data, newItem]);
+
+      } else {
+        // --- NORMAL ITEM FLOW (unchanged) ---
+        const menuItem = menuItems.find(i => i.id === Number(selectedMenuItemId));
+        if (!menuItem) return alert("Please select an item.");
+        itemName = menuItem.name;
+
+        const { data: existingVariant } = await supabase
+          .from("menu_item_variants")
+          .select("id")
+          .eq("menu_item_id", menuItem.id)
+          .eq("size_id", hasSizes ? Number(selectedSizeId) : null)
+          .maybeSingle();
+
+        if (existingVariant) variantId = existingVariant.id;
+        else {
+          const { data: newVariant, error: variantError } = await supabase
+            .from("menu_item_variants")
+            .insert({
+              menu_item_id: menuItem.id,
+              size_id: hasSizes ? Number(selectedSizeId) : null,
+              price: priceToUse,
+              is_active: true,
+            })
+            .select("id")
+            .single();
+          if (variantError || !newVariant) throw new Error("Failed to create variant");
+          variantId = newVariant.id;
+        }
+
+        const newItem: OrderItem = {
+          category: category.name,
+          name: itemName,
+          size: hasSizes
+            ? categorySizes.find(s => s.id === Number(selectedSizeId))?.size || "N/A"
+            : "N/A",
+          qty: selectedQty,
+          price: priceToUse,
+          variant_id: variantId,
+        };
+        onChange([...data, newItem]);
       }
+
+      // --- RESET UI ---
+      setSelectedCategoryId("");
+      setSelectedMenuItemId("");
+      setSelectedSizeId("");
+      setSelectedQty(1);
+      setComplexItemParts(["", ""]);
+      setCustomItemPrice(0);
+      setIsComplexCategory(false);
+      setHasSizes(true);
+      setMenuItems([]);
+      setCategorySizes([]);
+      setActivePrice(null);
+
+    } catch (err) {
+      console.error("Error adding item:", err);
+      alert("Failed to add item. Check console for details.");
     }
-
-    const newItem: OrderItem = {
-      category: category.name,
-      name: itemName,
-      size: hasSizes
-        ? categorySizes.find(s => s.id === Number(selectedSizeId))?.size || "N/A"
-        : "N/A",
-      qty: selectedQty,
-      price: priceToUse,
-      variant_id: variantId,
-    };
-
-    onChange([...data, newItem]);
-
-    // Reset UI
-    setSelectedCategoryId("");
-    setSelectedMenuItemId("");
-    setSelectedSizeId("");
-    setSelectedQty(1);
-    setComplexItemParts(["", ""]);
-    setCustomItemPrice(0);
-    setIsComplexCategory(false);
-    setHasSizes(true);
-    setMenuItems([]);
-    setCategorySizes([]);
-    setActivePrice(null);
   };
+
 
   const handleCategoryChange = (e: SelectChangeEvent) => {
     const categoryId = e.target.value;
     const category = categories.find(c => c.id === Number(categoryId));
+
     setSelectedCategoryId(categoryId);
     setSelectedMenuItemId("");
     setSelectedSizeId("");
@@ -278,15 +376,14 @@ export default function OrderItems({ data, onChange }: Props) {
   const handleItemChange = (e: SelectChangeEvent) => setSelectedMenuItemId(e.target.value);
   const handleRemove = (idx: number) => onChange(data.filter((_, i) => i !== idx));
 
-  const isNormalFlowInvalid =
-    !selectedMenuItemId || (hasSizes && !selectedSizeId) || (activePrice === null && customItemPrice <= 0);
-  const isComplexFlowInvalid =
-    !joinedComplexName || (activePrice === null && customItemPrice <= 0);
+  const isNormalFlowInvalid = !selectedMenuItemId || (hasSizes && !selectedSizeId) || (activePrice === null && customItemPrice <= 0);
+  const isComplexFlowInvalid = !joinedComplexName || (activePrice === null && customItemPrice <= 0);
 
   return (
     <div className="order-items-container">
       <h3>Add Order Items</h3>
       <Divider sx={{ mb: 3 }} />
+
       <div className="order-item-fields">
         <div className="order-items-content">
           {/* Category */}
@@ -325,7 +422,13 @@ export default function OrderItems({ data, onChange }: Props) {
                 onClick={addComplexItemField}
                 startIcon={<AddIcon />}
                 variant="outlined"
-                sx={{ alignSelf: "flex-start", color: "#ec7a1c", borderColor: "#ec7a1c", padding: '6px 16px', "&:hover": { backgroundColor: "#ec7a1c", color: "white", borderColor: "#ec7a1c" } }}
+                sx={{
+                  alignSelf: "flex-start",
+                  color: "#ec7a1c",
+                  borderColor: "#ec7a1c",
+                  padding: '6px 16px',
+                  "&:hover": { backgroundColor: "#ec7a1c", color: "white", borderColor: "#ec7a1c" }
+                }}
               >
                 Meal Item
               </Button>
@@ -351,7 +454,7 @@ export default function OrderItems({ data, onChange }: Props) {
             {hasSizes && (
               <FormControl component="fieldset" className="size-group" disabled={!selectedCategoryId}>
                 <p>Size</p>
-                <RadioGroup row value={selectedSizeId} onChange={e => setSelectedSizeId(e.target.value)} style={{ color: "black", marginLeft: "24px" }}>
+                <RadioGroup row value={selectedSizeId} onChange={e => setSelectedSizeId(e.target.value)} style={{ marginLeft: "24px" }}>
                   {categorySizes.map(s => <FormControlLabel key={s.id} value={s.id.toString()} control={<Radio />} label={s.size} />)}
                 </RadioGroup>
               </FormControl>
@@ -384,7 +487,9 @@ export default function OrderItems({ data, onChange }: Props) {
               variant={(isComplexCategory ? isComplexFlowInvalid : isNormalFlowInvalid) ? "outlined" : "contained"}
               startIcon={<AddShoppingCartIcon />}
               onClick={handleAdd}
-              sx={(isComplexCategory ? isComplexFlowInvalid : isNormalFlowInvalid) ? { borderColor: 'rgba(0,0,0,0.26)', color: 'rgba(0,0,0,0.26)' } : { backgroundColor: "#EC7A1C", "&:hover": { backgroundColor: "#d66c10" } }}
+              sx={(isComplexCategory ? isComplexFlowInvalid : isNormalFlowInvalid)
+                ? { borderColor: 'rgba(0,0,0,0.26)', color: 'rgba(0,0,0,0.26)' }
+                : { backgroundColor: "#EC7A1C", "&:hover": { backgroundColor: "#d66c10" } }}
               disabled={isComplexCategory ? isComplexFlowInvalid : isNormalFlowInvalid}
             >
               {data.length === 0 ? "Add To Cart" : "Add Another Item"}
@@ -398,7 +503,9 @@ export default function OrderItems({ data, onChange }: Props) {
         <div className="order-items-list">
           <h4>Order List</h4>
           {data.length === 0 && (
-            <Typography variant="body2" color="text.secondary" sx={{ ml: 2 }}>No items added yet.</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ ml: 2 }}>
+              No items added yet.
+            </Typography>
           )}
           {data.map((item, idx) => (
             <Box key={idx} sx={{ mb: 2, ml: 2, position: "relative" }}>
