@@ -43,6 +43,23 @@ try {
 
       if (data.user && data.user.email) {
         onLogin(data.user.email, userRole);
+
+        // 🔹 Trigger sync in the background
+        try {
+          const res = await fetch('https://capstone-2-tg05.onrender.com/', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email: data.user.email }),
+          });
+
+          const result = await res.json();
+          console.log('Sync result:', result);
+        } catch (syncErr) {
+          console.error('Sync error:', syncErr);
+        }
+
         navigate("/salesoverview");
       } else {
         setError("Login successful, but user email is not available.");
