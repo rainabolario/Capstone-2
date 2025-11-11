@@ -28,6 +28,10 @@ import {
   Box,
 } from "@mui/material";
 
+interface SalesDataProps {
+  onLogout: () => void;
+}
+
 interface SalesRecord {
   id: string;
   ordersId: string;
@@ -44,7 +48,7 @@ interface SalesRecord {
   archived?: boolean;
 }
 
-const SalesData: React.FC = () => {
+const SalesData: React.FC<SalesDataProps>= ({ onLogout }) => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [salesData, setSalesData] = useState<SalesRecord[]>([]);

@@ -9,7 +9,7 @@ interface MarketBasketProps {
   onLogout: () => void;
 }
 
-const MarketBasket: React.FC<MarketBasketProps> = ({ onLogout }) => {
+const MarketBasket: React.FC<MarketBasketProps> = ({ currentUser, onLogout }) => {
   return (
     <div className="market-basket-container">
       <Sidebar onLogout={onLogout} />
