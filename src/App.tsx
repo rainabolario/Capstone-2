@@ -122,7 +122,7 @@ function App() {
           path="/salesdata"
           element={
             <ProtectedRoute allowedRoles={["Admin", "Staff"]}>
-              <SalesData onLogout={handleLogout} />
+             <SalesData /> 
             </ProtectedRoute>
           }
         />

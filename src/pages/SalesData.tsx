@@ -44,7 +44,7 @@ interface SalesRecord {
   archived?: boolean;
 }
 
-const SalesData: React.FC= () => {
+const SalesData: React.FC = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [salesData, setSalesData] = useState<SalesRecord[]>([]);
