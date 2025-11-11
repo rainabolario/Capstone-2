@@ -22,7 +22,7 @@ interface User {
   is_active?: boolean;
 }
 
-const UserManagement: React.FC<UserManagementProps> = ({ onLogout }) => {
+const UserManagement: React.FC<UserManagementProps> = ({}) => {
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());

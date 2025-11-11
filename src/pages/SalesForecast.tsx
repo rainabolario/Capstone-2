@@ -7,7 +7,7 @@ interface SalesForecastProps {
   onLogout: () => void
 }
 
-const SalesForecast: React.FC<SalesForecastProps> = ({currentUser, onLogout }) => {
+const SalesForecast: React.FC<SalesForecastProps> = ({ onLogout }) => {
     return (
         <div className='forecast-container'>
             <Sidebar onLogout={onLogout} />
