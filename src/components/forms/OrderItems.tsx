@@ -4,15 +4,13 @@ import {
   Button,
   Divider,
   FormControl,
-  InputLabel,
-  MenuItem,
-  Select,
   RadioGroup,
   FormControlLabel,
   Radio,
   TextField,
   Typography,
   IconButton,
+  Autocomplete,
 } from "@mui/material";
 import type { SelectChangeEvent } from "@mui/material/Select";
 import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
@@ -53,7 +51,7 @@ export default function OrderItems({ data, onChange }: Props) {
   const [selectedQty, setSelectedQty] = useState(1);
   const [isComplexCategory, setIsComplexCategory] = useState(false);
   const [complexItemParts, setComplexItemParts] = useState<string[]>(["", ""]);
-  const [customItemPrice, setCustomItemPrice] = useState(0);
+  const [customItemPrice, setCustomItemPrice] = useState<number | null>(null);
   const [hasSizes, setHasSizes] = useState(true);
   const [activePrice, setActivePrice] = useState<number | null>(null);
 
@@ -77,6 +75,37 @@ export default function OrderItems({ data, onChange }: Props) {
 
     if (!isComplexCategory) {
       const fetchMenuItems = async () => {
+        try {
+          let categoryIdToUse = Number(selectedCategoryId);
+
+          // If current category is PACKED MEAL, use FOOD TRAY category instead
+          const currentCategory = categories.find(c => c.id === categoryIdToUse);
+          if (currentCategory?.name?.toUpperCase() === "PACKED MEAL") {
+            const { data: trayCategory } = await supabase
+              .from("category")
+              .select("id")
+              .ilike("name", "FOOD TRAY")
+              .maybeSingle();
+            if (trayCategory?.id) categoryIdToUse = trayCategory.id;
+          }
+
+          const { data, error } = await supabase
+            .from("menu_items")
+            .select("id, name, category_id")
+            .eq("category_id", categoryIdToUse);
+
+          if (error) throw error;
+          setMenuItems(data || []);
+        } catch (err) {
+          console.error("Error fetching menu items:", err);
+          setMenuItems([]);
+        }
+      };
+
+      fetchMenuItems();
+
+    } else {
+      const fetchMenuItems = async () => {
         const { data, error } = await supabase
           .from("menu_items")
           .select("id, name, category_id")
@@ -85,8 +114,6 @@ export default function OrderItems({ data, onChange }: Props) {
         else setMenuItems(data || []);
       };
       fetchMenuItems();
-    } else {
-      setMenuItems([]);
     }
 
     if (hasSizes) {
@@ -126,7 +153,7 @@ export default function OrderItems({ data, onChange }: Props) {
     }
   }, [selectedCategoryId, isComplexCategory, hasSizes]);
 
-  // --- FETCH PRICE FROM RAW_MENU OR USE TYPED PRICE ---
+  // --- FETCH PRICE ---
   useEffect(() => {
     if (!selectedMenuItemId || (hasSizes && !selectedSizeId) || isComplexCategory) {
       setActivePrice(null);
@@ -162,17 +189,15 @@ export default function OrderItems({ data, onChange }: Props) {
   // --- HANDLE COMPLEX ITEM ---
   const handleComplexItemChange = (index: number, value: string) => {
     const newParts = [...complexItemParts];
-    newParts[index] = value.toUpperCase();
+    newParts[index] = value;
     setComplexItemParts(newParts);
   };
 
   const addComplexItemField = () => setComplexItemParts([...complexItemParts, ""]);
-
   const removeComplexItemField = (indexToRemove: number) => {
     if (complexItemParts.length <= 2) return;
     setComplexItemParts(complexItemParts.filter((_, idx) => idx !== indexToRemove));
   };
-
   const joinedComplexName = complexItemParts.map(p => p.trim()).filter(p => p).join(" + ");
 
   // --- HANDLE ADD ITEM ---
@@ -182,21 +207,24 @@ export default function OrderItems({ data, onChange }: Props) {
     if (selectedQty < 1) return alert("Quantity must be at least 1.");
 
     const priceToUse = activePrice ?? customItemPrice;
-    if (priceToUse <= 0) return alert("Please enter a price greater than 0.");
+    if (priceToUse == null || priceToUse <= 0) return alert("Please enter a price greater than 0.");
 
     let itemName = "";
     let variantId: number | undefined;
 
     try {
       if (isComplexCategory) {
-        // --- COMPLEX ITEM FLOW ---
         const parts = complexItemParts.map(p => p.trim()).filter(p => p);
         if (!parts.length) return alert("Please enter item parts.");
 
-        // 1️⃣ Main complex item name
-        itemName = parts.join(" + ");
+        const resolvedNames = parts
+          .map(id => menuItems.find(i => i.id === Number(id))?.name)
+          .filter((name): name is string => Boolean(name));
 
-        // 2️⃣ Create or get main menu item for the complex name
+        if (resolvedNames.length === 0) return alert("Packed meal parts could not be resolved.");
+
+        itemName = resolvedNames.join(" + ");
+
         let menuItemId: number;
         const { data: existingMenuItem } = await supabase
           .from("menu_items")
@@ -204,20 +232,19 @@ export default function OrderItems({ data, onChange }: Props) {
           .eq("name", itemName)
           .maybeSingle();
 
-        if (existingMenuItem) menuItemId = existingMenuItem.id;
-        else {
+        if (existingMenuItem && existingMenuItem.id) {
+          menuItemId = existingMenuItem.id;
+        } else {
           const { data: newMenuItem, error: newItemError } = await supabase
             .from("menu_items")
             .insert({ name: itemName, category_id: Number(selectedCategoryId) })
             .select("id")
             .single();
-          if (newItemError || !newMenuItem) throw new Error("Failed to create menu item for complex item");
+          if (newItemError || !newMenuItem) throw new Error("Failed to create menu item");
           menuItemId = newMenuItem.id;
         }
 
-        // 3️⃣ If PACKED MEAL, upsert parts in packed_meal_items
-        if (category.name === "PACKED MEAL") {
-          // Ensure packed meal exists
+        if (category.name.toUpperCase().includes("PACKED MEAL")) {
           const { data: existingMeal } = await supabase
             .from("packed_meals")
             .select("id")
@@ -225,8 +252,9 @@ export default function OrderItems({ data, onChange }: Props) {
             .maybeSingle();
 
           let packedMealId: number;
-          if (existingMeal) packedMealId = existingMeal.id;
-          else {
+          if (existingMeal && existingMeal.id) {
+            packedMealId = existingMeal.id;
+          } else {
             const { data: newMeal, error: mealError } = await supabase
               .from("packed_meals")
               .insert({ name: itemName })
@@ -236,31 +264,26 @@ export default function OrderItems({ data, onChange }: Props) {
             packedMealId = newMeal.id;
           }
 
-          // Link parts to the packed meal
-          for (const partName of parts) {
-            // Get menu item ID of the part (assume it exists)
-            const { data: partData, error: partError } = await supabase
+          for (const partMenuItemId of parts) {
+            const partIdNum = Number(partMenuItemId);
+            if (!partIdNum) continue;
+
+            const { data: partExists } = await supabase
               .from("menu_items")
               .select("id")
-              .eq("name", partName);
+              .eq("id", partIdNum)
+              .maybeSingle();
 
-            if (partError || !partData || partData.length === 0) continue;
+            if (!partExists || !partExists.id) continue;
 
-            const partMenuItemId = partData[0].id;
-
-            // Upsert into packed_meal_items
             const { error: upsertError } = await supabase
               .from("packed_meal_items")
-              .upsert(
-                [{ packed_meal_id: packedMealId, menu_item_id: partMenuItemId }],
-                { onConflict: "packed_meal_id,menu_item_id" }
-              );
+              .upsert([{ packed_meal_id: packedMealId, menu_item_id: partIdNum }], { onConflict: "packed_meal_id,menu_item_id" });
 
             if (upsertError) console.error("Failed to upsert packed_meal_items:", upsertError);
           }
         }
 
-        // 4️⃣ Upsert variant for the main complex item
         const { data: existingVariant } = await supabase
           .from("menu_item_variants")
           .select("id")
@@ -268,7 +291,7 @@ export default function OrderItems({ data, onChange }: Props) {
           .eq("size_id", hasSizes ? Number(selectedSizeId) : null)
           .maybeSingle();
 
-        if (existingVariant) variantId = existingVariant.id;
+        if (existingVariant && existingVariant.id) variantId = existingVariant.id;
         else {
           const { data: newVariant, error: variantError } = await supabase
             .from("menu_item_variants")
@@ -280,17 +303,14 @@ export default function OrderItems({ data, onChange }: Props) {
             })
             .select("id")
             .single();
-          if (variantError || !newVariant) throw new Error("Failed to create variant for complex item");
+          if (variantError || !newVariant) throw new Error("Failed to create variant");
           variantId = newVariant.id;
         }
 
-        // 5️⃣ Add to order list
         const newItem: OrderItem = {
           category: category.name,
           name: itemName,
-          size: hasSizes
-            ? categorySizes.find(s => s.id === Number(selectedSizeId))?.size || "N/A"
-            : "N/A",
+          size: hasSizes ? categorySizes.find(s => s.id === Number(selectedSizeId))?.size || "N/A" : "N/A",
           qty: selectedQty,
           price: priceToUse,
           variant_id: variantId,
@@ -298,7 +318,6 @@ export default function OrderItems({ data, onChange }: Props) {
         onChange([...data, newItem]);
 
       } else {
-        // --- NORMAL ITEM FLOW (unchanged) ---
         const menuItem = menuItems.find(i => i.id === Number(selectedMenuItemId));
         if (!menuItem) return alert("Please select an item.");
         itemName = menuItem.name;
@@ -310,7 +329,7 @@ export default function OrderItems({ data, onChange }: Props) {
           .eq("size_id", hasSizes ? Number(selectedSizeId) : null)
           .maybeSingle();
 
-        if (existingVariant) variantId = existingVariant.id;
+        if (existingVariant && existingVariant.id) variantId = existingVariant.id;
         else {
           const { data: newVariant, error: variantError } = await supabase
             .from("menu_item_variants")
@@ -329,9 +348,7 @@ export default function OrderItems({ data, onChange }: Props) {
         const newItem: OrderItem = {
           category: category.name,
           name: itemName,
-          size: hasSizes
-            ? categorySizes.find(s => s.id === Number(selectedSizeId))?.size || "N/A"
-            : "N/A",
+          size: hasSizes ? categorySizes.find(s => s.id === Number(selectedSizeId))?.size || "N/A" : "N/A",
           qty: selectedQty,
           price: priceToUse,
           variant_id: variantId,
@@ -339,13 +356,12 @@ export default function OrderItems({ data, onChange }: Props) {
         onChange([...data, newItem]);
       }
 
-      // --- RESET UI ---
       setSelectedCategoryId("");
       setSelectedMenuItemId("");
       setSelectedSizeId("");
       setSelectedQty(1);
       setComplexItemParts(["", ""]);
-      setCustomItemPrice(0);
+      setCustomItemPrice(null);
       setIsComplexCategory(false);
       setHasSizes(true);
       setMenuItems([]);
@@ -358,8 +374,7 @@ export default function OrderItems({ data, onChange }: Props) {
     }
   };
 
-
-  const handleCategoryChange = (e: SelectChangeEvent) => {
+  const handleCategoryChange = async (e: SelectChangeEvent) => {
     const categoryId = e.target.value;
     const category = categories.find(c => c.id === Number(categoryId));
 
@@ -369,15 +384,48 @@ export default function OrderItems({ data, onChange }: Props) {
     setComplexItemParts(["", ""]);
     setCustomItemPrice(0);
     setSelectedQty(1);
-    setIsComplexCategory(category ? COMPLEX_CATEGORY_NAMES.includes(category.name) : false);
-    setHasSizes(category ? !NO_SIZE_CATEGORIES.includes(category.name) : true);
+
+    const complex = category ? COMPLEX_CATEGORY_NAMES.includes(category.name) : false;
+    const sizes = category ? !NO_SIZE_CATEGORIES.includes(category.name) : true;
+
+    setIsComplexCategory(complex);
+    setHasSizes(sizes);
+
+    let categoryIdToUse = Number(categoryId);
+    if (category?.name?.toUpperCase() === "PACKED MEAL") {
+      const { data: trayCategory } = await supabase
+        .from("category")
+        .select("id")
+        .ilike("name", "FOOD TRAY")
+        .maybeSingle();
+      if (trayCategory?.id) categoryIdToUse = trayCategory.id;
+    }
+
+    const { data, error } = await supabase
+      .from("menu_items")
+      .select("id, name, category_id")
+      .eq("category_id", categoryIdToUse);
+
+    if (error) {
+      console.error("Error fetching menu items:", error);
+      setMenuItems([]);
+    } else {
+      setMenuItems(data || []);
+    }
+
+    setCategorySizes([]);
   };
 
-  const handleItemChange = (e: SelectChangeEvent) => setSelectedMenuItemId(e.target.value);
   const handleRemove = (idx: number) => onChange(data.filter((_, i) => i !== idx));
 
-  const isNormalFlowInvalid = !selectedMenuItemId || (hasSizes && !selectedSizeId) || (activePrice === null && customItemPrice <= 0);
-  const isComplexFlowInvalid = !joinedComplexName || (activePrice === null && customItemPrice <= 0);
+  const isNormalFlowInvalid =
+    !selectedMenuItemId ||
+    (hasSizes && !selectedSizeId) ||
+    (activePrice === null && (customItemPrice === null || customItemPrice <= 0));
+
+  const isComplexFlowInvalid =
+    !joinedComplexName ||
+    (activePrice === null && (customItemPrice === null || customItemPrice <= 0));
 
   return (
     <div className="order-items-container">
@@ -386,31 +434,32 @@ export default function OrderItems({ data, onChange }: Props) {
 
       <div className="order-item-fields">
         <div className="order-items-content">
-          {/* Category */}
-          <FormControl fullWidth sx={{ mb: 2 }}>
-            <InputLabel id="cat-label" shrink>Item Category</InputLabel>
-            <Select
-              labelId="cat-label"
-              value={selectedCategoryId}
-              onChange={handleCategoryChange}
-              displayEmpty
-              renderValue={(selected) => !selected ? <span style={{ color: "#9e9e9e" }}>Select category</span> : categories.find(c => c.id === Number(selected))?.name || ""}
-            >
-              {categories.map(c => <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>)}
-            </Select>
-          </FormControl>
 
+          {/* Category */}
+          <Autocomplete
+            options={categories}
+            getOptionLabel={(option) => option.name}
+            value={categories.find(c => c.id === Number(selectedCategoryId)) || null}
+            onChange={(_, newValue) => {
+              handleCategoryChange({ target: { value: newValue?.id || "" } } as any);
+            }}
+            renderInput={(params) => <TextField {...params} label="Item Category" variant="outlined" fullWidth sx={{ mb: 2 }} />}
+          />
+
+          {/* Item Name / Complex Items */}
           {isComplexCategory ? (
             <Box sx={{ display: "flex", flexDirection: "column", gap: 1, mb: 2 }}>
               {complexItemParts.map((part, index) => (
-                <Box key={index} sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <TextField
-                    label={`Item ${index + 1}`}
-                    value={part}
-                    onChange={e => handleComplexItemChange(index, e.target.value)}
-                    fullWidth
-                    InputLabelProps={{ shrink: true }}
+                <Box key={index} sx={{ display: "flex", gap: 1, mb: 1 }}>
+                  <Autocomplete
+                    options={menuItems}
+                    getOptionLabel={(option) => option.name}
+                    value={menuItems.find(i => i.id === Number(part)) || null}
+                    onChange={(_, newValue) => handleComplexItemChange(index, newValue?.id.toString() || "")}
+                    renderInput={(params) => <TextField {...params} label={`Item ${index + 1}`} variant="outlined" fullWidth />}
+                    sx={{ flexGrow: 1 }} // Make it stretch
                   />
+
                   {index > 1 && (
                     <IconButton onClick={() => removeComplexItemField(index)} size="small">
                       <DeleteIcon />
@@ -418,6 +467,7 @@ export default function OrderItems({ data, onChange }: Props) {
                   )}
                 </Box>
               ))}
+
               <Button
                 onClick={addComplexItemField}
                 startIcon={<AddIcon />}
@@ -427,26 +477,21 @@ export default function OrderItems({ data, onChange }: Props) {
                   color: "#ec7a1c",
                   borderColor: "#ec7a1c",
                   padding: '6px 16px',
-                  "&:hover": { backgroundColor: "#ec7a1c", color: "white", borderColor: "#ec7a1c" }
+                  "&:hover": { backgroundColor: "#ec7a1c", color: "white", borderColor: "#ec7a1c" },
                 }}
               >
                 Meal Item
               </Button>
             </Box>
           ) : (
-            <FormControl fullWidth sx={{ mb: 2 }}>
-              <InputLabel id="name-label" shrink>Item Name</InputLabel>
-              <Select
-                labelId="name-label"
-                value={selectedMenuItemId}
-                onChange={handleItemChange}
-                disabled={!selectedCategoryId}
-                displayEmpty
-                renderValue={(selected) => !selected ? <span style={{ color: "#9e9e9e" }}>Select item</span> : menuItems.find(i => i.id === Number(selected))?.name || ""}
-              >
-                {menuItems.map(i => <MenuItem key={i.id} value={i.id}>{i.name}</MenuItem>)}
-              </Select>
-            </FormControl>
+            <Autocomplete
+              options={menuItems}
+              getOptionLabel={(option) => option.name}
+              value={menuItems.find(i => i.id === Number(selectedMenuItemId)) || null}
+              onChange={(_, newValue) => setSelectedMenuItemId(newValue?.id.toString() || "")}
+              renderInput={(params) => <TextField {...params} label="Item Name" variant="outlined" fullWidth sx={{ mb: 2 }} />}
+              disabled={!selectedCategoryId}
+            />
           )}
 
           {/* Sizes and Quantity */}
@@ -476,8 +521,16 @@ export default function OrderItems({ data, onChange }: Props) {
             <TextField
               type="number"
               label="Price per Item (₱)"
-              value={activePrice ?? customItemPrice}
-              onChange={e => setCustomItemPrice(Number(e.target.value))}
+              placeholder="0"
+              value={activePrice ?? (customItemPrice && customItemPrice > 0 ? customItemPrice : "")}
+              onChange={(e) => {
+                const val = e.target.value;
+                setCustomItemPrice(val === "" ? null : Number(val));
+              }}
+              onFocus={(e) => {
+                // clear field on first focus if value is 0
+                if (e.target.value === "0") e.target.value = "";
+              }}
               sx={{ mb: 2, width: "100%" }}
               InputLabelProps={{ shrink: true }}
               inputProps={{ min: 0 }}

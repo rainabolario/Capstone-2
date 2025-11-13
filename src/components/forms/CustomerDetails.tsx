@@ -66,7 +66,13 @@ export default function CustomerDetails({ data, onChange }: Props) {
         if (mopError) console.error("Error fetching from 'mop':", mopError);
 
         if (mediumData) setOrderModeOptions(mediumData.map((row) => row.name));
-        if (mopData) setPaymentModeOptions(mopData.map((row) => row.name));
+        if (mopData) {
+          // Exclude any MOPs that already contain "+"
+          const filtered = mopData
+            .map((row) => row.name)
+            .filter((name) => !name.includes("+"));
+          setPaymentModeOptions(filtered);
+        }
       } catch (err) {
         console.error("Unexpected fetch error:", err);
       }

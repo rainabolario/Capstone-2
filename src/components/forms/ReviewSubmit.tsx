@@ -51,9 +51,6 @@ export default function ReviewSubmit({ data }: Props) {
             <div className="customer-labels">Name</div>
             <div className="customer-values">{customer.name}</div>
           </div>
-          <div className="customer-fields-container">
-            <div className="customer-labels">Address</div>
-          </div>
         </div>
         <div className="customer-fields-container">
           <div className="customer-labels">Order Mode</div>
