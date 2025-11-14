@@ -24,7 +24,7 @@ const SalesForecast: React.FC<SalesForecastProps> = ({ onLogout }) => {
                     <div className="tableau-responsive-wrapper">
                         <iframe
                             className="tableau-iframe"
-                            src="https://prod-apsoutheast-b.online.tableau.com/t/rhicarhichelleflorescics-89b56ea568/views/051125_PDS/FORECAST?:embed=y&:toolbar=no"
+                            src="https://prod-apsoutheast-b.online.tableau.com/t/rhicarhichelleflorescics-89b56ea568/views/051125_PDS/FORECAST?:embed=y&:toolbar=no&:refresh=yes"
                             frameBorder="0"
                         ></iframe>
                     </div>
